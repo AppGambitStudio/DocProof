@@ -56,6 +56,19 @@ DocProof is built entirely on AWS serverless services. This is a deliberate arch
 - **Scalability** — Handles 1 job or 1,000 concurrent jobs with no configuration changes. Lambda scales automatically per-request. DynamoDB on-demand scales with traffic. No capacity planning needed.
 - **Operational simplicity** — No Docker, no Kubernetes, no EC2 instances, no load balancers. Deploy with `npx sst deploy`. Monitor with CloudWatch. The entire infrastructure is defined in ~200 lines of TypeScript.
 
+### Why Structured Workflow, Not an AI Agent?
+
+Document verification is a **bounded, repeatable task** — not an open-ended conversation. DocProof uses a deterministic workflow with targeted LLM calls rather than an autonomous agent. Here's why:
+
+- **Token cost** — An agent would reason about each document, decide what to extract, plan next steps, and self-correct in a loop. That's 5-10x more tokens per document. DocProof makes exactly **1 LLM call per document** (extraction) + 1 per semantic rule (validation). A 3-document KYC job uses ~2,000 tokens total, not 20,000.
+- **Consistent output** — Agents produce variable outputs depending on their reasoning path. DocProof's structured prompts return the same JSON schema every time. The rule engine runs deterministic checks (regex, checksum, date range) — no LLM needed for what code can do reliably.
+- **Debuggability** — When a validation fails, you can trace exactly which rule failed, on which field, with what extracted value. No opaque agent reasoning to interpret. Every check is documented with confidence scores and reasoning.
+- **Speed** — The pipeline runs all extractions in parallel, then validates in one pass. No sequential agent "thinking" steps. A typical job completes in 10-30 seconds, not minutes.
+
+- **Predictable cost at scale** — Enterprises process thousands of onboarding jobs per day. With a structured workflow, cost scales linearly and predictably — N documents = N extraction calls. An agent's token usage is unbounded and varies per run, making budgeting impossible at 10,000 jobs/month. When finance asks "what will this cost next quarter?", you need a number, not a range.
+
+The LLM is used surgically: extraction (reading documents) and semantic matching (comparing addresses across documents). Everything else is code.
+
 ## Quick Start
 
 ### Prerequisites
