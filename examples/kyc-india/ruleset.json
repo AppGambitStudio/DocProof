@@ -1,0 +1,180 @@
+{
+  "id": "kyc_india_individual",
+  "name": "KYC — Individual (India)",
+  "description": "Standard KYC document verification for individual customer onboarding in India. Covers PAN, Aadhaar, and address proof validation with cross-document consistency checks.",
+  "version": 1,
+  "status": "active",
+
+  "documentTypes": [
+    {
+      "typeId": "pan_card",
+      "label": "PAN Card",
+      "required": true,
+      "maxCount": 1,
+      "acceptedFormats": ["pdf", "jpg", "png"],
+      "extractionPrompt": "This is an Indian Permanent Account Number (PAN) card issued by the Income Tax Department. Extract the PAN number, full name, father's name, date of birth, and photograph presence.",
+      "expectedFields": [
+        { "name": "pan_number", "label": "PAN Number", "type": "string", "description": "10-character alphanumeric PAN (e.g., ABCDE1234F)" },
+        { "name": "full_name", "label": "Full Name", "type": "string", "description": "Name as printed on the PAN card" },
+        { "name": "fathers_name", "label": "Father's Name", "type": "string" },
+        { "name": "date_of_birth", "label": "Date of Birth", "type": "date", "description": "DD/MM/YYYY format" },
+        { "name": "has_photo", "label": "Photo Present", "type": "boolean" }
+      ]
+    },
+    {
+      "typeId": "aadhaar_card",
+      "label": "Aadhaar Card",
+      "required": true,
+      "maxCount": 1,
+      "acceptedFormats": ["pdf", "jpg", "png"],
+      "extractionPrompt": "This is an Indian Aadhaar card issued by UIDAI. Extract the Aadhaar number, full name, date of birth, gender, and address.",
+      "expectedFields": [
+        { "name": "aadhaar_number", "label": "Aadhaar Number", "type": "string", "description": "12-digit number, may have spaces" },
+        { "name": "full_name", "label": "Full Name", "type": "string" },
+        { "name": "date_of_birth", "label": "Date of Birth", "type": "date" },
+        { "name": "gender", "label": "Gender", "type": "enum" },
+        { "name": "address", "label": "Address", "type": "string", "description": "Full address as printed" }
+      ]
+    },
+    {
+      "typeId": "address_proof",
+      "label": "Address Proof",
+      "required": true,
+      "maxCount": 2,
+      "acceptedFormats": ["pdf", "jpg", "png"],
+      "extractionPrompt": "This is an address proof document (utility bill, bank statement, or rent agreement). Extract the name, address, document date, and document type.",
+      "expectedFields": [
+        { "name": "document_type", "label": "Document Type", "type": "enum", "description": "utility_bill, bank_statement, rent_agreement, voter_id, passport" },
+        { "name": "full_name", "label": "Name on Document", "type": "string" },
+        { "name": "address", "label": "Address", "type": "string" },
+        { "name": "document_date", "label": "Document Date", "type": "date", "description": "Date of issue or statement date" }
+      ]
+    },
+    {
+      "typeId": "photograph",
+      "label": "Passport-size Photograph",
+      "required": false,
+      "maxCount": 1,
+      "acceptedFormats": ["jpg", "png"],
+      "extractionPrompt": "This should be a passport-size photograph. Check if it contains a clear face, is recent-looking, and meets basic photo ID standards.",
+      "expectedFields": [
+        { "name": "has_face", "label": "Face Detected", "type": "boolean" },
+        { "name": "quality", "label": "Photo Quality", "type": "enum", "description": "good, fair, poor" }
+      ]
+    }
+  ],
+
+  "fieldRules": [
+    {
+      "id": "fr_pan_format",
+      "documentType": "pan_card",
+      "field": "pan_number",
+      "validations": [
+        { "type": "required" },
+        { "type": "checksum", "algorithm": "pan" }
+      ]
+    },
+    {
+      "id": "fr_pan_name",
+      "documentType": "pan_card",
+      "field": "full_name",
+      "validations": [
+        { "type": "required" },
+        { "type": "length", "min": 2, "max": 100 }
+      ]
+    },
+    {
+      "id": "fr_pan_dob",
+      "documentType": "pan_card",
+      "field": "date_of_birth",
+      "validations": [
+        { "type": "required" }
+      ]
+    },
+    {
+      "id": "fr_aadhaar_format",
+      "documentType": "aadhaar_card",
+      "field": "aadhaar_number",
+      "validations": [
+        { "type": "required" },
+        { "type": "checksum", "algorithm": "aadhaar" }
+      ]
+    },
+    {
+      "id": "fr_aadhaar_name",
+      "documentType": "aadhaar_card",
+      "field": "full_name",
+      "validations": [
+        { "type": "required" },
+        { "type": "length", "min": 2, "max": 100 }
+      ]
+    },
+    {
+      "id": "fr_address_recency",
+      "documentType": "address_proof",
+      "field": "document_date",
+      "validations": [
+        { "type": "required" },
+        { "type": "date_range", "relative": "-90d", "max": "today" }
+      ]
+    },
+    {
+      "id": "fr_address_type",
+      "documentType": "address_proof",
+      "field": "document_type",
+      "validations": [
+        { "type": "required" },
+        { "type": "enum", "values": ["utility_bill", "bank_statement", "rent_agreement", "voter_id", "passport"] }
+      ]
+    }
+  ],
+
+  "crossDocRules": [
+    {
+      "id": "cd_name_pan_aadhaar",
+      "description": "Name on PAN card must match name on Aadhaar card",
+      "sourceDoc": "pan_card",
+      "sourceField": "full_name",
+      "targetDoc": "aadhaar_card",
+      "targetField": "full_name",
+      "matchType": "fuzzy",
+      "threshold": 0.85
+    },
+    {
+      "id": "cd_dob_pan_aadhaar",
+      "description": "Date of birth on PAN must match Aadhaar",
+      "sourceDoc": "pan_card",
+      "sourceField": "date_of_birth",
+      "targetDoc": "aadhaar_card",
+      "targetField": "date_of_birth",
+      "matchType": "exact"
+    },
+    {
+      "id": "cd_name_aadhaar_address",
+      "description": "Name on Aadhaar must match name on address proof",
+      "sourceDoc": "aadhaar_card",
+      "sourceField": "full_name",
+      "targetDoc": "address_proof",
+      "targetField": "full_name",
+      "matchType": "fuzzy",
+      "threshold": 0.80
+    },
+    {
+      "id": "cd_address_consistency",
+      "description": "Address on Aadhaar should be consistent with address proof. Check if they refer to the same location even if formatting differs.",
+      "sourceDoc": "aadhaar_card",
+      "sourceField": "address",
+      "targetDoc": "address_proof",
+      "targetField": "address",
+      "matchType": "semantic"
+    }
+  ],
+
+  "metadataRules": [],
+
+  "promptConfig": {
+    "systemPrompt": "You are a document verification specialist for Indian KYC (Know Your Customer) compliance. You extract structured data from identity and address documents with high accuracy. Always normalize names to title case, dates to DD/MM/YYYY, and addresses to a consistent format. Flag any signs of tampering, poor quality, or inconsistency.",
+    "extractionInstructions": "For each document, extract all requested fields precisely as they appear. If a field is not visible or illegible, set its value to null and note the issue in anomalies. Pay special attention to: (1) matching names exactly as printed, (2) correct date formats, (3) complete addresses including PIN code, (4) document validity and recency.",
+    "temperature": 0
+  }
+}

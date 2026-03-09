@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "paths": {
+      "@docproof/core/*": ["./packages/core/src/*"],
+      "@docproof/functions/*": ["./packages/functions/src/*"]
+    }
+  },
+  "exclude": ["node_modules", ".sst"]
+}

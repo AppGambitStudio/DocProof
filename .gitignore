@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# SST
+.sst/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.*
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test coverage
+coverage/
+
+# Ignore temp file
+temp/

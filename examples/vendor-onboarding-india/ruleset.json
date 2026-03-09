@@ -1,0 +1,382 @@
+{
+  "id": "vendor_onboarding_india",
+  "name": "Vendor Onboarding — Indian Company",
+  "description": "Document verification for onboarding Indian vendors/suppliers. Covers company registration, tax compliance, banking details, and authorized signatory verification. Supports Private Limited, LLP, Proprietorship, and Partnership firms.",
+  "version": 1,
+  "status": "active",
+
+  "promptConfig": {
+    "systemPrompt": "You are a document verification specialist for Indian corporate and vendor onboarding compliance. You extract structured data from company registration, tax, banking, and identity documents. Normalize company names consistently (Pvt/Private, Ltd/Limited are equivalent). Dates should be in DD/MM/YYYY format. Flag expired documents, inactive registrations, and name mismatches.",
+    "extractionInstructions": "For each document, extract all requested fields precisely as they appear. If a field is not visible or illegible, set its value to null and note the issue in anomalies. Pay special attention to: (1) company name consistency across documents, (2) GSTIN must embed the company PAN, (3) CIN format validation, (4) MSME/Udyam registration number format, (5) bank details must match the company name.",
+    "temperature": 0
+  },
+
+  "documentTypes": [
+    {
+      "typeId": "certificate_of_incorporation",
+      "label": "Certificate of Incorporation",
+      "category": "Company Registration",
+      "required": true,
+      "maxCount": 1,
+      "acceptedFormats": ["pdf", "jpg", "png"],
+      "extractionPrompt": "Certificate of Incorporation issued by the Registrar of Companies (MCA), India. This document proves the company's legal existence. For LLPs, this may be an LLP Agreement or Certificate of Registration.",
+      "applicableTo": ["PRIVATE_LIMITED", "PUBLIC_LIMITED", "LLP"],
+      "expectedFields": [
+        { "name": "company_name", "label": "Company Name", "type": "string", "description": "Full legal name as registered" },
+        { "name": "cin", "label": "CIN / LLPIN", "type": "string", "description": "Corporate Identification Number (21 chars) or LLP Identification Number" },
+        { "name": "date_of_incorporation", "label": "Date of Incorporation", "type": "date" },
+        { "name": "registered_office", "label": "Registered Office Address", "type": "string" },
+        { "name": "authorized_capital", "label": "Authorized Capital", "type": "string", "description": "In INR, if mentioned" },
+        { "name": "company_type", "label": "Company Type", "type": "enum", "description": "Private Limited / Public Limited / LLP / One Person Company" },
+        { "name": "directors", "label": "Directors / Partners", "type": "string", "description": "Comma-separated list of initial directors or designated partners" }
+      ],
+      "fieldExtractionRules": {
+        "cin": {
+          "format": "CIN: L/U + 5 digits + 2 letters + 4 digits + 3 letters + 6 digits + 1 digit. LLPIN: AAA-1234",
+          "instructions": "CIN is 21 characters. First character is L (listed) or U (unlisted). If document is for LLP, extract the LLPIN instead."
+        }
+      },
+      "flagConditions": [
+        "CIN/LLPIN format appears invalid",
+        "Document is a photocopy without MCA stamp",
+        "Company name is illegible"
+      ]
+    },
+    {
+      "typeId": "company_pan",
+      "label": "Company PAN Card",
+      "category": "Tax Registration",
+      "required": true,
+      "maxCount": 1,
+      "acceptedFormats": ["pdf", "jpg", "png"],
+      "extractionPrompt": "Permanent Account Number (PAN) card issued by the Income Tax Department of India for a company or firm. The 4th character indicates entity type: C=Company, F=Firm, H=HUF, T=Trust.",
+      "applicableTo": ["PRIVATE_LIMITED", "PUBLIC_LIMITED", "LLP", "PARTNERSHIP", "PROPRIETORSHIP"],
+      "expectedFields": [
+        { "name": "pan_number", "label": "PAN Number", "type": "string", "description": "10-character alphanumeric PAN" },
+        { "name": "entity_name", "label": "Entity Name", "type": "string", "description": "Company/Firm name as on PAN" },
+        { "name": "date_of_incorporation", "label": "Date of Incorporation/Formation", "type": "date" },
+        { "name": "pan_holder_status", "label": "PAN Holder Status", "type": "string", "description": "Company / Firm / Association of Persons etc." }
+      ],
+      "fieldExtractionRules": {
+        "pan_number": {
+          "format": "5 letters + 4 digits + 1 letter (e.g., AABCC1234D)",
+          "instructions": "4th character determines entity type: C=Company, F=Firm, H=HUF, A=Association, T=Trust, P=Individual"
+        }
+      },
+      "flagConditions": [
+        "PAN format is invalid",
+        "4th character does not match expected entity type",
+        "Card appears damaged or tampered"
+      ]
+    },
+    {
+      "typeId": "gst_certificate",
+      "label": "GST Registration Certificate",
+      "category": "Tax Registration",
+      "required": true,
+      "maxCount": 1,
+      "acceptedFormats": ["pdf", "jpg", "png"],
+      "extractionPrompt": "GST Registration Certificate issued by the Goods and Services Tax Network (GSTN). The GSTIN is a 15-character number where characters 3-12 are the entity's PAN.",
+      "applicableTo": ["PRIVATE_LIMITED", "PUBLIC_LIMITED", "LLP", "PARTNERSHIP", "PROPRIETORSHIP"],
+      "expectedFields": [
+        { "name": "gstin", "label": "GSTIN", "type": "string", "description": "15-character GST Identification Number" },
+        { "name": "legal_name", "label": "Legal Name of Business", "type": "string" },
+        { "name": "trade_name", "label": "Trade Name", "type": "string" },
+        { "name": "principal_address", "label": "Principal Place of Business", "type": "string" },
+        { "name": "date_of_registration", "label": "Date of Registration", "type": "date" },
+        { "name": "registration_type", "label": "Type of Registration", "type": "enum", "description": "Regular / Composition / ISD / TDS / TCS" },
+        { "name": "status", "label": "Registration Status", "type": "enum", "description": "Active / Cancelled / Suspended" }
+      ],
+      "fieldExtractionRules": {
+        "gstin": {
+          "format": "2 digits (state) + 10 chars (PAN) + 1 digit + Z + 1 checksum",
+          "instructions": "Characters 3-12 of the GSTIN must match the entity PAN. Verify this relationship."
+        }
+      },
+      "flagConditions": [
+        "Status is not 'Active'",
+        "GSTIN format is invalid",
+        "PAN embedded in GSTIN does not match company PAN"
+      ]
+    },
+    {
+      "typeId": "msme_certificate",
+      "label": "MSME / Udyam Registration",
+      "category": "Company Registration",
+      "required": false,
+      "maxCount": 1,
+      "acceptedFormats": ["pdf", "jpg", "png"],
+      "extractionPrompt": "Udyam Registration Certificate (formerly MSME registration) issued by the Ministry of MSME, Government of India. This certifies the enterprise as Micro, Small, or Medium.",
+      "applicableTo": ["PRIVATE_LIMITED", "LLP", "PARTNERSHIP", "PROPRIETORSHIP"],
+      "expectedFields": [
+        { "name": "udyam_number", "label": "Udyam Registration Number", "type": "string", "description": "Format: UDYAM-XX-00-0000000" },
+        { "name": "enterprise_name", "label": "Name of Enterprise", "type": "string" },
+        { "name": "enterprise_type", "label": "Type of Enterprise", "type": "enum", "description": "Micro / Small / Medium" },
+        { "name": "owner_name", "label": "Name of Owner / Proprietor", "type": "string" },
+        { "name": "date_of_registration", "label": "Date of Udyam Registration", "type": "date" },
+        { "name": "major_activity", "label": "Major Activity", "type": "enum", "description": "Manufacturing / Services" },
+        { "name": "nic_code", "label": "NIC Code", "type": "string" }
+      ],
+      "flagConditions": [
+        "Udyam number format is invalid",
+        "Enterprise name does not match company name",
+        "This is an old EM-II/UAM certificate (should be migrated to Udyam)"
+      ]
+    },
+    {
+      "typeId": "cancelled_cheque",
+      "label": "Cancelled Cheque / Bank Proof",
+      "category": "Banking",
+      "required": true,
+      "maxCount": 1,
+      "acceptedFormats": ["pdf", "jpg", "png"],
+      "extractionPrompt": "A cancelled cheque or bank account verification letter showing the company's bank account details. Must clearly show account holder name, account number, IFSC code, and bank name.",
+      "applicableTo": ["PRIVATE_LIMITED", "PUBLIC_LIMITED", "LLP", "PARTNERSHIP", "PROPRIETORSHIP"],
+      "expectedFields": [
+        { "name": "account_holder_name", "label": "Account Holder Name", "type": "string" },
+        { "name": "bank_name", "label": "Bank Name", "type": "string" },
+        { "name": "branch", "label": "Branch", "type": "string" },
+        { "name": "account_number", "label": "Account Number", "type": "string" },
+        { "name": "ifsc_code", "label": "IFSC Code", "type": "string", "description": "11-character bank branch code" },
+        { "name": "account_type", "label": "Account Type", "type": "enum", "description": "Current / Savings" }
+      ],
+      "fieldExtractionRules": {
+        "ifsc_code": {
+          "format": "4 letters (bank) + 0 + 6 alphanumeric (branch)",
+          "instructions": "IFSC is always 11 characters. 5th character is always 0."
+        }
+      },
+      "flagConditions": [
+        "'CANCELLED' is not written on the cheque (if cheque, not bank letter)",
+        "Account holder name does not match company name",
+        "Details are illegible or partially visible"
+      ]
+    },
+    {
+      "typeId": "authorized_signatory_id",
+      "label": "Authorized Signatory PAN / ID",
+      "category": "Signatory Verification",
+      "required": true,
+      "maxCount": 3,
+      "acceptedFormats": ["pdf", "jpg", "png"],
+      "extractionPrompt": "Government-issued identity document (PAN card, Aadhaar, Passport, or Voter ID) of the authorized signatory or director of the vendor company. This verifies the individual who signs on behalf of the company.",
+      "applicableTo": ["PRIVATE_LIMITED", "PUBLIC_LIMITED", "LLP", "PARTNERSHIP", "PROPRIETORSHIP"],
+      "expectedFields": [
+        { "name": "document_type", "label": "ID Document Type", "type": "enum", "description": "pan_card / aadhaar / passport / voter_id / driving_license" },
+        { "name": "full_name", "label": "Full Name", "type": "string" },
+        { "name": "id_number", "label": "ID Number", "type": "string", "description": "PAN / Aadhaar last 4 / Passport number etc." },
+        { "name": "date_of_birth", "label": "Date of Birth", "type": "date" },
+        { "name": "address", "label": "Address (if present)", "type": "string" }
+      ],
+      "fieldExtractionRules": {
+        "id_number": {
+          "instructions": "For Aadhaar, extract ONLY the last 4 digits for privacy. For PAN, extract the full 10-character number. For Passport, extract the full passport number."
+        }
+      },
+      "flagConditions": [
+        "Document is expired",
+        "Name is illegible",
+        "Photo is not clearly visible",
+        "Document appears tampered"
+      ]
+    },
+    {
+      "typeId": "board_resolution",
+      "label": "Board Resolution / Authorization Letter",
+      "category": "Signatory Verification",
+      "required": false,
+      "maxCount": 1,
+      "acceptedFormats": ["pdf"],
+      "extractionPrompt": "Board resolution or authorization letter appointing the authorized signatory who can sign agreements and documents on behalf of the company. For proprietorships, this may be a self-declaration.",
+      "applicableTo": ["PRIVATE_LIMITED", "PUBLIC_LIMITED", "LLP", "PARTNERSHIP"],
+      "expectedFields": [
+        { "name": "company_name", "label": "Company Name", "type": "string" },
+        { "name": "resolution_date", "label": "Date of Resolution", "type": "date" },
+        { "name": "authorized_signatories", "label": "Authorized Signatories", "type": "string", "description": "Comma-separated names of persons authorized" },
+        { "name": "scope", "label": "Scope of Authorization", "type": "string", "description": "What the signatory is authorized to do" },
+        { "name": "is_signed", "label": "Is Signed", "type": "boolean" },
+        { "name": "directors_present", "label": "Directors/Partners Present", "type": "string", "description": "Names of directors who approved" }
+      ],
+      "flagConditions": [
+        "Resolution does not mention signing authority",
+        "No specific signatory named",
+        "Resolution is unsigned or undated",
+        "Company name does not match"
+      ]
+    }
+  ],
+
+  "fieldRules": [
+    {
+      "id": "fr_pan_format",
+      "documentType": "company_pan",
+      "field": "pan_number",
+      "validations": [
+        { "type": "required" },
+        { "type": "checksum", "algorithm": "pan" }
+      ]
+    },
+    {
+      "id": "fr_pan_entity_name",
+      "documentType": "company_pan",
+      "field": "entity_name",
+      "validations": [
+        { "type": "required" },
+        { "type": "length", "min": 2, "max": 200 }
+      ]
+    },
+    {
+      "id": "fr_gstin_format",
+      "documentType": "gst_certificate",
+      "field": "gstin",
+      "validations": [
+        { "type": "required" },
+        { "type": "checksum", "algorithm": "gstin" }
+      ]
+    },
+    {
+      "id": "fr_gst_status_active",
+      "documentType": "gst_certificate",
+      "field": "status",
+      "validations": [
+        { "type": "required" },
+        { "type": "enum", "values": ["Active"] }
+      ]
+    },
+    {
+      "id": "fr_ifsc_format",
+      "documentType": "cancelled_cheque",
+      "field": "ifsc_code",
+      "validations": [
+        { "type": "required" },
+        { "type": "regex", "pattern": "^[A-Z]{4}0[A-Z0-9]{6}$", "message": "IFSC must be 11 characters: 4 letters + 0 + 6 alphanumeric" }
+      ]
+    },
+    {
+      "id": "fr_account_number",
+      "documentType": "cancelled_cheque",
+      "field": "account_number",
+      "validations": [
+        { "type": "required" },
+        { "type": "length", "min": 6, "max": 18 }
+      ]
+    },
+    {
+      "id": "fr_cin_format",
+      "documentType": "certificate_of_incorporation",
+      "field": "cin",
+      "validations": [
+        { "type": "required" },
+        { "type": "regex", "pattern": "^[LU][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}$", "message": "CIN must be 21 characters in MCA format" }
+      ]
+    },
+    {
+      "id": "fr_signatory_name",
+      "documentType": "authorized_signatory_id",
+      "field": "full_name",
+      "validations": [
+        { "type": "required" },
+        { "type": "length", "min": 2, "max": 100 }
+      ]
+    },
+    {
+      "id": "fr_udyam_format",
+      "documentType": "msme_certificate",
+      "field": "udyam_number",
+      "validations": [
+        { "type": "required" },
+        { "type": "regex", "pattern": "^UDYAM-[A-Z]{2}-[0-9]{2}-[0-9]{7}$", "message": "Udyam number format: UDYAM-XX-00-0000000" }
+      ]
+    }
+  ],
+
+  "crossDocRules": [
+    {
+      "id": "cd_name_pan_incorporation",
+      "description": "Company name on PAN must match the name on Certificate of Incorporation",
+      "sourceDoc": "company_pan",
+      "sourceField": "entity_name",
+      "targetDoc": "certificate_of_incorporation",
+      "targetField": "company_name",
+      "matchType": "fuzzy",
+      "threshold": 0.85
+    },
+    {
+      "id": "cd_name_pan_gst",
+      "description": "Company name on PAN must match the legal name on GST certificate",
+      "sourceDoc": "company_pan",
+      "sourceField": "entity_name",
+      "targetDoc": "gst_certificate",
+      "targetField": "legal_name",
+      "matchType": "fuzzy",
+      "threshold": 0.85
+    },
+    {
+      "id": "cd_pan_in_gstin",
+      "description": "The PAN number must be embedded within the GSTIN (characters 3-12 of GSTIN should match the PAN)",
+      "sourceDoc": "company_pan",
+      "sourceField": "pan_number",
+      "targetDoc": "gst_certificate",
+      "targetField": "gstin",
+      "matchType": "contains"
+    },
+    {
+      "id": "cd_name_pan_cheque",
+      "description": "Company name on PAN must match the account holder name on cancelled cheque",
+      "sourceDoc": "company_pan",
+      "sourceField": "entity_name",
+      "targetDoc": "cancelled_cheque",
+      "targetField": "account_holder_name",
+      "matchType": "fuzzy",
+      "threshold": 0.80
+    },
+    {
+      "id": "cd_address_incorporation_gst",
+      "description": "Registered office address on Certificate of Incorporation should be consistent with the principal place of business on GST certificate",
+      "sourceDoc": "certificate_of_incorporation",
+      "sourceField": "registered_office",
+      "targetDoc": "gst_certificate",
+      "targetField": "principal_address",
+      "matchType": "semantic"
+    },
+    {
+      "id": "cd_signatory_in_resolution",
+      "description": "The authorized signatory's name (from their ID) must appear in the board resolution as an authorized person",
+      "sourceDoc": "authorized_signatory_id",
+      "sourceField": "full_name",
+      "targetDoc": "board_resolution",
+      "targetField": "authorized_signatories",
+      "matchType": "fuzzy",
+      "threshold": 0.85
+    },
+    {
+      "id": "cd_name_msme_pan",
+      "description": "Enterprise name on MSME/Udyam certificate must match the entity name on PAN",
+      "sourceDoc": "msme_certificate",
+      "sourceField": "enterprise_name",
+      "targetDoc": "company_pan",
+      "targetField": "entity_name",
+      "matchType": "fuzzy",
+      "threshold": 0.80
+    }
+  ],
+
+  "metadataRules": [
+    {
+      "id": "mr_company_name",
+      "field": "companyName",
+      "validations": [
+        { "type": "required" },
+        { "type": "length", "min": 2, "max": 200 }
+      ]
+    },
+    {
+      "id": "mr_entity_type",
+      "field": "entityType",
+      "validations": [
+        { "type": "required" },
+        { "type": "enum", "values": ["PRIVATE_LIMITED", "PUBLIC_LIMITED", "LLP", "PARTNERSHIP", "PROPRIETORSHIP"] }
+      ]
+    }
+  ]
+}

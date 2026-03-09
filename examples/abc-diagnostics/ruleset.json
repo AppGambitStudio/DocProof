@@ -1,0 +1,609 @@
+{
+  "id": "ABC_client_onboarding",
+  "name": "ABC — Client Code Creation",
+  "description": "Document verification for CRM client code creation at ABC Healthcare Limited. Covers identity, authorization, financial, and agreement documents.",
+  "version": 1,
+  "status": "active",
+  "promptConfig": {
+    "role": "a document extraction specialist for ABC Healthcare Limited (ABC), a diagnostics and pathology company in India",
+    "organizationContext": "This extracted data will subsequently be used in a separate validation step to determine whether mandatory requirements for CRM client code creation are met.",
+    "multiDocPerFile": true,
+    "imageQualityAssessment": true,
+    "nameMatching": {
+      "enabled": true,
+      "metadataField": "clientName",
+      "allowAbbreviations": true,
+      "allowReordering": true,
+      "customGuidance": "For entity names, 'Pvt' vs 'Private', 'Ltd' vs 'Limited' are acceptable variations. Check for full name vs short/initials (e.g., 'Ramesh Kumar' vs 'R. Kumar') — highlight this as a partial match."
+    },
+    "contextFields": [
+      "clientName",
+      "entityType"
+    ]
+  },
+  "documentTypes": [
+    {
+      "typeId": "pan_card",
+      "label": "PAN Card",
+      "category": "Identity & Entity Registration",
+      "required": true,
+      "maxCount": 1,
+      "acceptedFormats": [
+        "pdf",
+        "jpg",
+        "png"
+      ],
+      "extractionPrompt": "Permanent Account Number issued by Indian Income Tax Department (Individual or Entity)",
+      "applicableTo": [
+        "COMPANY",
+        "PROPRIETORSHIP",
+        "INDIVIDUAL",
+        "INTERIM"
+      ],
+      "expectedFields": [
+        {
+          "name": "panNumber",
+          "label": "PAN Number",
+          "type": "string",
+          "description": "10-character alphanumeric PAN"
+        },
+        {
+          "name": "fullName",
+          "label": "Full Name",
+          "type": "string",
+          "description": "Name as printed on the PAN card"
+        },
+        {
+          "name": "fatherName",
+          "label": "Father's Name",
+          "type": "string"
+        },
+        {
+          "name": "dateOfBirth",
+          "label": "Date of Birth",
+          "type": "date"
+        },
+        {
+          "name": "panHolderType",
+          "label": "PAN Holder Type",
+          "type": "string",
+          "description": "Individual / Company / Firm / Trust / etc."
+        }
+      ],
+      "fieldExtractionRules": {
+        "panNumber": {
+          "format": "5 letters + 4 digits + 1 letter (e.g., ABCDE1234F)",
+          "instructions": "PAN holder type is inferred from the 4th character: P=Individual, C=Company, F=Firm, H=HUF, T=Trust"
+        },
+        "dateOfBirth": {
+          "format": "dd-mm-yyyy"
+        }
+      },
+      "flagConditions": [
+        "PAN format is invalid",
+        "Name is illegible",
+        "Card appears damaged or tampered"
+      ]
+    },
+    {
+      "typeId": "aadhaar_card",
+      "label": "Aadhaar Card",
+      "category": "Identity & Entity Registration",
+      "required": false,
+      "maxCount": 1,
+      "acceptedFormats": [
+        "pdf",
+        "jpg",
+        "png"
+      ],
+      "extractionPrompt": "12-digit unique identity number issued by UIDAI (individuals only)",
+      "applicableTo": [
+        "INDIVIDUAL"
+      ],
+      "expectedFields": [
+        {
+          "name": "last4DigitsAadhaar",
+          "label": "Last 4 Digits of Aadhaar",
+          "type": "string"
+        },
+        {
+          "name": "fullName",
+          "label": "Full Name",
+          "type": "string"
+        },
+        {
+          "name": "dateOfBirth",
+          "label": "Date of Birth",
+          "type": "date"
+        },
+        {
+          "name": "gender",
+          "label": "Gender",
+          "type": "string"
+        },
+        {
+          "name": "address",
+          "label": "Address",
+          "type": "string",
+          "description": "City/State only"
+        }
+      ],
+      "fieldExtractionRules": {
+        "last4DigitsAadhaar": {
+          "maskExtraction": true,
+          "maskInstructions": "Extract ONLY the last 4 digits of the Aadhaar number for privacy. Do NOT extract the full 12-digit number."
+        },
+        "dateOfBirth": {
+          "format": "dd-mm-yyyy"
+        }
+      },
+      "flagConditions": [
+        "Image is masked/e-Aadhaar with partial details",
+        "Name is illegible",
+        "Card appears expired or damaged"
+      ]
+    },
+    {
+      "typeId": "gst_certificate",
+      "label": "GST Certificate",
+      "category": "Identity & Entity Registration",
+      "required": false,
+      "maxCount": 1,
+      "acceptedFormats": [
+        "pdf",
+        "jpg",
+        "png"
+      ],
+      "extractionPrompt": "GSTIN registration certificate issued by GST authorities (entity-level)",
+      "applicableTo": [
+        "COMPANY",
+        "PROPRIETORSHIP"
+      ],
+      "expectedFields": [
+        {
+          "name": "gstin",
+          "label": "GSTIN",
+          "type": "string",
+          "description": "15-character alphanumeric"
+        },
+        {
+          "name": "legalName",
+          "label": "Legal Name of Business",
+          "type": "string"
+        },
+        {
+          "name": "tradeName",
+          "label": "Trade Name",
+          "type": "string"
+        },
+        {
+          "name": "principalAddress",
+          "label": "Principal Place of Business",
+          "type": "string"
+        },
+        {
+          "name": "dateOfRegistration",
+          "label": "Date of Registration",
+          "type": "date"
+        },
+        {
+          "name": "registrationType",
+          "label": "Type of Registration",
+          "type": "string",
+          "description": "Regular / Composition / etc."
+        },
+        {
+          "name": "status",
+          "label": "Status",
+          "type": "string",
+          "description": "Active / Cancelled / Suspended"
+        }
+      ],
+      "flagConditions": [
+        "Status is not 'Active'",
+        "GSTIN format is invalid",
+        "Business name does not match the provided entity name"
+      ]
+    },
+    {
+      "typeId": "cancelled_cheque",
+      "label": "Cancelled Cheque",
+      "category": "Financial Documents",
+      "required": true,
+      "maxCount": 1,
+      "acceptedFormats": [
+        "pdf",
+        "jpg",
+        "png"
+      ],
+      "extractionPrompt": "Bank cheque marked 'CANCELLED' showing account holder name, account number, and IFSC code",
+      "applicableTo": [
+        "COMPANY",
+        "PROPRIETORSHIP",
+        "INDIVIDUAL"
+      ],
+      "expectedFields": [
+        {
+          "name": "accountHolderName",
+          "label": "Account Holder Name",
+          "type": "string"
+        },
+        {
+          "name": "bankName",
+          "label": "Bank Name",
+          "type": "string"
+        },
+        {
+          "name": "branch",
+          "label": "Branch",
+          "type": "string"
+        },
+        {
+          "name": "accountNumber",
+          "label": "Account Number",
+          "type": "string"
+        },
+        {
+          "name": "ifscCode",
+          "label": "IFSC Code",
+          "type": "string"
+        }
+      ],
+      "flagConditions": [
+        "'CANCELLED' is not written on the cheque",
+        "Name does not match entity name",
+        "Details are illegible"
+      ]
+    },
+    {
+      "typeId": "diagnostic_services_agreement",
+      "label": "Diagnostic Services Agreement",
+      "category": "Agreements & Operational",
+      "required": true,
+      "maxCount": 1,
+      "acceptedFormats": [
+        "pdf"
+      ],
+      "extractionPrompt": "Contract for diagnostic/pathology services between ABC and the client",
+      "applicableTo": [
+        "COMPANY",
+        "PROPRIETORSHIP",
+        "INDIVIDUAL"
+      ],
+      "expectedFields": [
+        {
+          "name": "partyAName",
+          "label": "Party A Name",
+          "type": "string"
+        },
+        {
+          "name": "partyBName",
+          "label": "Party B Name",
+          "type": "string"
+        },
+        {
+          "name": "partyABusinessType",
+          "label": "Party A Business Type",
+          "type": "string"
+        },
+        {
+          "name": "partyBBusinessType",
+          "label": "Party B Business Type",
+          "type": "string"
+        },
+        {
+          "name": "partyAAddress",
+          "label": "Party A Address",
+          "type": "string"
+        },
+        {
+          "name": "partyBAddress",
+          "label": "Party B Address",
+          "type": "string"
+        },
+        {
+          "name": "dateOfAgreement",
+          "label": "Date of Agreement",
+          "type": "date"
+        },
+        {
+          "name": "agreementEffectiveDate",
+          "label": "Effective Date",
+          "type": "date"
+        },
+        {
+          "name": "agreementTermDuration",
+          "label": "Term/Duration",
+          "type": "string"
+        },
+        {
+          "name": "signatoryNames",
+          "label": "Signatory Names",
+          "type": "string",
+          "description": "Comma-separated list"
+        },
+        {
+          "name": "keyServiceDescription",
+          "label": "Key Services",
+          "type": "string"
+        },
+        {
+          "name": "jurisdiction",
+          "label": "Jurisdiction",
+          "type": "string"
+        },
+        {
+          "name": "signatoryStatus",
+          "label": "Signatory Status",
+          "type": "string",
+          "description": "signed or not-signed"
+        }
+      ],
+      "flagConditions": [
+        "ABC is not a party to the agreement",
+        "Agreement is unsigned",
+        "Agreement is undated",
+        "Entity name does not match client context"
+      ]
+    },
+    {
+      "typeId": "board_resolution",
+      "label": "Board Resolution",
+      "category": "Authorization Documents",
+      "required": false,
+      "maxCount": 1,
+      "acceptedFormats": [
+        "pdf",
+        "jpg",
+        "png"
+      ],
+      "extractionPrompt": "Corporate board minutes authorizing a signatory for execution",
+      "applicableTo": [
+        "COMPANY"
+      ],
+      "expectedFields": [
+        {
+          "name": "companyName",
+          "label": "Company Name",
+          "type": "string"
+        },
+        {
+          "name": "dateOfResolution",
+          "label": "Date of Resolution",
+          "type": "date"
+        },
+        {
+          "name": "authorizedSignatories",
+          "label": "Authorized Signatories",
+          "type": "string",
+          "description": "Comma-separated names"
+        },
+        {
+          "name": "scopeOfAuthorization",
+          "label": "Scope of Authorization",
+          "type": "string"
+        },
+        {
+          "name": "directorsApproved",
+          "label": "Directors Who Approved",
+          "type": "string"
+        }
+      ],
+      "flagConditions": [
+        "Resolution does not mention signing authority for agreements/documents",
+        "No specific signatory named",
+        "Resolution is undated"
+      ]
+    },
+    {
+      "typeId": "waste_management_certificate",
+      "label": "Waste Management Certificate",
+      "category": "Agreements & Operational",
+      "required": false,
+      "maxCount": 1,
+      "acceptedFormats": [
+        "pdf",
+        "jpg",
+        "png"
+      ],
+      "extractionPrompt": "Biomedical waste management authorization",
+      "applicableTo": [
+        "COMPANY",
+        "PROPRIETORSHIP"
+      ],
+      "expectedFields": [
+        {
+          "name": "authorizationNumber",
+          "label": "Authorization Number",
+          "type": "string"
+        },
+        {
+          "name": "facilityName",
+          "label": "Facility Name",
+          "type": "string"
+        },
+        {
+          "name": "authorizedPerson",
+          "label": "Authorized Person",
+          "type": "string"
+        },
+        {
+          "name": "issuingAuthority",
+          "label": "Issuing Authority",
+          "type": "string"
+        },
+        {
+          "name": "dateOfIssue",
+          "label": "Date of Issue",
+          "type": "date"
+        },
+        {
+          "name": "validityExpiry",
+          "label": "Validity/Expiry",
+          "type": "date"
+        }
+      ],
+      "flagConditions": [
+        "Certificate has expired",
+        "Facility name does not match entity name"
+      ]
+    }
+  ],
+  "fieldRules": [
+    {
+      "id": "fr_pan_format",
+      "documentType": "pan_card",
+      "field": "panNumber",
+      "validations": [
+        {
+          "type": "required"
+        },
+        {
+          "type": "checksum",
+          "algorithm": "pan"
+        }
+      ]
+    },
+    {
+      "id": "fr_pan_name",
+      "documentType": "pan_card",
+      "field": "fullName",
+      "validations": [
+        {
+          "type": "required"
+        },
+        {
+          "type": "length",
+          "min": 2,
+          "max": 100
+        }
+      ]
+    },
+    {
+      "id": "fr_gst_format",
+      "documentType": "gst_certificate",
+      "field": "gstin",
+      "validations": [
+        {
+          "type": "required"
+        },
+        {
+          "type": "checksum",
+          "algorithm": "gstin"
+        }
+      ]
+    },
+    {
+      "id": "fr_gst_status",
+      "documentType": "gst_certificate",
+      "field": "status",
+      "validations": [
+        {
+          "type": "required"
+        },
+        {
+          "type": "enum",
+          "values": [
+            "Active"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fr_cheque_ifsc",
+      "documentType": "cancelled_cheque",
+      "field": "ifscCode",
+      "validations": [
+        {
+          "type": "required"
+        },
+        {
+          "type": "regex",
+          "pattern": "^[A-Z]{4}0[A-Z0-9]{6}$",
+          "message": "IFSC must be 11 characters: 4 letters + 0 + 6 alphanumeric"
+        }
+      ]
+    },
+    {
+      "id": "fr_agreement_signed",
+      "documentType": "diagnostic_services_agreement",
+      "field": "signatoryStatus",
+      "validations": [
+        {
+          "type": "required"
+        },
+        {
+          "type": "enum",
+          "values": [
+            "signed"
+          ]
+        }
+      ]
+    }
+  ],
+  "crossDocRules": [
+    {
+      "id": "cd_name_pan_gst",
+      "description": "Name on PAN card must match legal name on GST certificate",
+      "sourceDoc": "pan_card",
+      "sourceField": "fullName",
+      "targetDoc": "gst_certificate",
+      "targetField": "legalName",
+      "matchType": "fuzzy",
+      "threshold": 0.85
+    },
+    {
+      "id": "cd_name_pan_cheque",
+      "description": "Name on PAN card must match account holder name on cancelled cheque",
+      "sourceDoc": "pan_card",
+      "sourceField": "fullName",
+      "targetDoc": "cancelled_cheque",
+      "targetField": "accountHolderName",
+      "matchType": "fuzzy",
+      "threshold": 0.80
+    },
+    {
+      "id": "cd_name_agreement_entity",
+      "description": "One of the parties in the Diagnostic Services Agreement must match the client entity name",
+      "sourceDoc": "diagnostic_services_agreement",
+      "sourceField": "partyBName",
+      "targetDoc": "pan_card",
+      "targetField": "fullName",
+      "matchType": "semantic"
+    }
+  ],
+  "metadataRules": [
+    {
+      "id": "mr_entity_type",
+      "field": "entityType",
+      "validations": [
+        {
+          "type": "required"
+        },
+        {
+          "type": "enum",
+          "values": [
+            "COMPANY",
+            "PROPRIETORSHIP",
+            "INDIVIDUAL",
+            "INTERIM"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mr_client_name",
+      "field": "clientName",
+      "validations": [
+        {
+          "type": "required"
+        },
+        {
+          "type": "length",
+          "min": 2,
+          "max": 200
+        }
+      ]
+    }
+  ]
+}

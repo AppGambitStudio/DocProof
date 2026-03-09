@@ -1,0 +1,36 @@
+{
+  "name": "docproof",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-Powered Document Validation Engine for Onboarding Workflows",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AppGambitStudio/docproof"
+  },
+  "license": "MIT",
+  "scripts": {
+    "dev": "sst dev",
+    "build": "sst build",
+    "deploy": "sst deploy",
+    "remove": "sst remove",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@tsconfig/node20": "^20.1.0",
+    "sst": "^3.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0",
+    "eslint": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
