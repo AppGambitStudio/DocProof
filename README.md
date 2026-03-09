@@ -47,6 +47,15 @@ Define Rules → Submit Job (metadata + N files) → Process → Extract (N para
 
 See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full system design.
 
+### Why Serverless?
+
+DocProof is built entirely on AWS serverless services. This is a deliberate architectural choice:
+
+- **Cost** — Zero idle cost. You pay only when jobs are processing. A typical KYC job (3 documents) costs under $0.01 in infrastructure — the Bedrock API calls are the primary expense. No servers running 24/7 waiting for work.
+- **Security** — No long-lived servers to patch or harden. Each Lambda execution is an isolated micro-VM. S3 and DynamoDB encrypt at rest by default. Cognito handles auth — no password storage in your application. API keys are stored in SSM SecureString.
+- **Scalability** — Handles 1 job or 1,000 concurrent jobs with no configuration changes. Lambda scales automatically per-request. DynamoDB on-demand scales with traffic. No capacity planning needed.
+- **Operational simplicity** — No Docker, no Kubernetes, no EC2 instances, no load balancers. Deploy with `npx sst deploy`. Monitor with CloudWatch. The entire infrastructure is defined in ~200 lines of TypeScript.
+
 ## Quick Start
 
 ### Prerequisites
