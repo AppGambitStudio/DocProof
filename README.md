@@ -20,7 +20,7 @@ Define Rules → Submit Job (metadata + N files) → Process → Extract (N para
 
 1. **Admin defines a RuleSet** — what documents are needed, what fields to extract, what validations to run, and how documents relate to each other
 2. **System submits a Job** — via API with metadata and document files (from CRM, ERP, or internal tools)
-3. **Claude extracts (N steps)** — each document is extracted in parallel using Haiku 4.5 via Bedrock; automatically escalates to Sonnet if confidence is LOW
+3. **Claude extracts (N steps)** — each document is extracted in parallel using [Haiku 4.5 via Bedrock](https://aws.amazon.com/bedrock/pricing/); automatically escalates to Sonnet if confidence is LOW
 4. **Rule Engine validates (1 step)** — all extracted data validated together: field-level checks (format, range, checksum), cross-document consistency (name matching, date alignment), and anomaly detection
 5. **Results returned** — per-document status, per-field validation, cross-doc checks, anomaly flags, confidence scores, token usage, and job cost in USD
 
