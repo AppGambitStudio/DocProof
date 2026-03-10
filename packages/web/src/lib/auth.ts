@@ -1,97 +1,100 @@
+import { Amplify } from "aws-amplify";
+import {
+  signIn as amplifySignIn,
+  signOut as amplifySignOut,
+  fetchAuthSession,
+  getCurrentUser,
+} from "aws-amplify/auth";
+
 const USER_POOL_ID = import.meta.env.VITE_USER_POOL_ID || "";
 const CLIENT_ID = import.meta.env.VITE_USER_POOL_CLIENT_ID || "";
 
-const TOKEN_KEY = "docproof_token";
-const REFRESH_KEY = "docproof_refresh";
-const EMAIL_KEY = "docproof_email";
-
-function cognitoEndpoint(): string {
-  const region = USER_POOL_ID.split("_")[0];
-  return `https://cognito-idp.${region}.amazonaws.com`;
-}
-
-interface AuthTokens {
-  idToken: string;
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-}
-
-interface CognitoError {
-  __type: string;
-  message: string;
-}
+Amplify.configure({
+  Auth: {
+    Cognito: {
+      userPoolId: USER_POOL_ID,
+      userPoolClientId: CLIENT_ID,
+    },
+  },
+});
 
 /**
- * Sign in with email + password via Cognito USER_PASSWORD_AUTH flow.
+ * Sign in with email + password via Amplify Auth.
  */
 export async function signIn(
   email: string,
   password: string
 ): Promise<{ success: true } | { success: false; error: string; newPasswordRequired?: boolean }> {
-  const res = await fetch(cognitoEndpoint(), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-amz-json-1.1",
-      "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth",
-    },
-    body: JSON.stringify({
-      AuthFlow: "USER_PASSWORD_AUTH",
-      ClientId: CLIENT_ID,
-      AuthParameters: {
-        USERNAME: email,
-        PASSWORD: password,
+  try {
+    const { nextStep } = await amplifySignIn({
+      username: email,
+      password,
+      options: {
+        authFlowType: "USER_SRP_AUTH",
       },
-    }),
-  });
+    });
 
-  const data = await res.json();
+    if (nextStep.signInStep === "CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED") {
+      return {
+        success: false,
+        error: "Password change required. Use the seed script with --permanent flag.",
+        newPasswordRequired: true,
+      };
+    }
 
-  if (!res.ok) {
-    const err = data as CognitoError;
-    return { success: false, error: err.message || "Authentication failed" };
-  }
-
-  // Handle NEW_PASSWORD_REQUIRED challenge (first login with temp password)
-  if (data.ChallengeName === "NEW_PASSWORD_REQUIRED") {
+    return { success: true };
+  } catch (err: any) {
     return {
       success: false,
-      error: "Password change required. Use the seed script with --permanent flag.",
-      newPasswordRequired: true,
+      error: err.message || "Authentication failed",
     };
   }
+}
 
-  const result = data.AuthenticationResult;
-  if (!result?.IdToken) {
-    return { success: false, error: "Unexpected response from Cognito" };
+/**
+ * Sign out — use Amplify signOut.
+ */
+export async function signOut(): Promise<void> {
+  try {
+    await amplifySignOut();
+  } catch (error) {
+    console.error("Error signing out", error);
   }
-
-  localStorage.setItem(TOKEN_KEY, result.IdToken);
-  localStorage.setItem(REFRESH_KEY, result.RefreshToken || "");
-  localStorage.setItem(EMAIL_KEY, email);
-
-  return { success: true };
 }
 
 /**
- * Sign out — clear stored tokens.
+ * Check if a user is currently signed in.
  */
-export function signOut(): void {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_KEY);
-  localStorage.removeItem(EMAIL_KEY);
-}
-
-/**
- * Check if a user is currently signed in (has a stored token).
- */
-export function isAuthenticated(): boolean {
-  return !!localStorage.getItem(TOKEN_KEY);
+export async function isAuthenticated(): Promise<boolean> {
+  try {
+    await getCurrentUser();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
  * Get the current user's email.
  */
-export function getCurrentEmail(): string | null {
-  return localStorage.getItem(EMAIL_KEY);
+export async function getCurrentEmail(): Promise<string | null> {
+  try {
+    const user = await getCurrentUser();
+    return user.signInDetails?.loginId || null;
+  } catch {
+    return null;
+  }
 }
+
+/**
+ * Get the current session's ID Token (JWT).
+ */
+export async function getToken(): Promise<string | null> {
+  try {
+    const session = await fetchAuthSession();
+    return session.tokens?.idToken?.toString() || null;
+  } catch {
+    return null;
+  }
+}
+

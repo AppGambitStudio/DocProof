@@ -1,19 +1,22 @@
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { signIn, isAuthenticated } from "../lib/auth";
+import { signIn } from "../lib/auth";
+import { useAuth } from "../lib/contexts/AuthContext";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { authenticated, refreshAuth } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Redirect if already authenticated
-  if (isAuthenticated()) {
-    navigate("/", { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (authenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [authenticated, navigate]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -22,14 +25,15 @@ export default function Login() {
 
     const result = await signIn(email, password);
 
-    setLoading(false);
-
     if (result.success) {
+      await refreshAuth();
       navigate("/", { replace: true });
     } else {
       setError(result.error);
+      setLoading(false);
     }
   }
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

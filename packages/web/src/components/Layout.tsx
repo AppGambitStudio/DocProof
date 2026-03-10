@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { signOut, getCurrentEmail } from "../lib/auth";
+import { useAuth } from "../lib/contexts/AuthContext";
 
 const navItems = [
   {
@@ -48,13 +48,14 @@ const navItems = [
 
 export function Layout() {
   const navigate = useNavigate();
-  const email = getCurrentEmail();
+  const { email, logout } = useAuth();
   const initial = email ? email[0].toUpperCase() : "A";
 
-  function handleSignOut() {
-    signOut();
+  async function handleSignOut() {
+    await logout();
     navigate("/login", { replace: true });
   }
+
 
   return (
     <div className="min-h-screen flex">
@@ -83,10 +84,9 @@ export function Layout() {
               to={item.to}
               end={item.to === "/"}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-slate-700 text-white"
-                    : "text-slate-300 hover:bg-slate-700/50 hover:text-white"
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
+                  ? "bg-slate-700 text-white"
+                  : "text-slate-300 hover:bg-slate-700/50 hover:text-white"
                 }`
               }
             >
