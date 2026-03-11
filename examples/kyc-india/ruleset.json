@@ -173,8 +173,19 @@
   "metadataRules": [],
 
   "promptConfig": {
-    "systemPrompt": "You are a document verification specialist for Indian KYC (Know Your Customer) compliance. You extract structured data from identity and address documents with high accuracy. Always normalize names to title case, dates to DD/MM/YYYY, and addresses to a consistent format. Flag any signs of tampering, poor quality, or inconsistency.",
-    "extractionInstructions": "For each document, extract all requested fields precisely as they appear. If a field is not visible or illegible, set its value to null and note the issue in anomalies. Pay special attention to: (1) matching names exactly as printed, (2) correct date formats, (3) complete addresses including PIN code, (4) document validity and recency.",
+    "role": "a document verification specialist for Indian KYC (Know Your Customer) compliance",
+    "organizationContext": "You extract structured data from identity and address documents with high accuracy. This extracted data will be used in a subsequent validation step to verify KYC requirements.",
+    "multiDocPerFile": true,
+    "imageQualityAssessment": true,
+    "nameMatching": {
+      "enabled": true,
+      "metadataField": "applicantName",
+      "allowAbbreviations": true,
+      "allowReordering": true,
+      "customGuidance": "For individual names, 'S/O' vs 'Son of', 'D/O' vs 'Daughter of' are acceptable variations. Middle name presence/absence is acceptable. Check for full name vs initials — highlight as partial match."
+    },
+    "contextFields": ["applicantName"],
+    "customInstructions": "Always normalize names to title case, dates to DD/MM/YYYY, and addresses to a consistent format. Flag any signs of tampering, poor quality, or inconsistency.\n\nFor each document, extract all requested fields precisely as they appear. If a field is not visible or illegible, set its value to null and note the issue in anomalies. Pay special attention to: (1) matching names exactly as printed, (2) correct date formats, (3) complete addresses including PIN code, (4) document validity and recency.",
     "temperature": 0
   }
 }

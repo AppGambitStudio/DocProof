@@ -91,9 +91,6 @@ export interface PromptConfig {
   contextFields?: string[];
   customSystemPrompt?: string;
   customAnalysisPrompt?: string;
-  // Free-form fields used by example rulesets
-  systemPrompt?: string;
-  extractionInstructions?: string;
   temperature?: number;
 }
 

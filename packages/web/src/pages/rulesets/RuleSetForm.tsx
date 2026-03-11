@@ -159,7 +159,7 @@ export function RuleSetForm() {
         crossDocRules: form.crossDocRules,
         metadataRules: form.metadataRules,
         promptConfig:
-          form.promptConfig.role || form.promptConfig.organizationContext || (form.promptConfig.contextFields && form.promptConfig.contextFields.length > 0)
+          form.promptConfig.role || form.promptConfig.organizationContext || form.promptConfig.customInstructions || form.promptConfig.customSystemPrompt || form.promptConfig.temperature !== undefined || (form.promptConfig.contextFields && form.promptConfig.contextFields.length > 0)
             ? form.promptConfig
             : undefined,
       };
@@ -1438,6 +1438,20 @@ export function RuleSetForm() {
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
+                Custom Instructions
+              </label>
+              <textarea
+                value={form.promptConfig.customInstructions || ""}
+                onChange={(e) =>
+                  updatePromptConfig({ customInstructions: e.target.value || undefined })
+                }
+                rows={4}
+                placeholder="Additional extraction instructions appended to the auto-generated prompt (normalization rules, special attention items, etc.)"
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
                 Context Fields (comma-separated)
               </label>
               <input
@@ -1457,6 +1471,82 @@ export function RuleSetForm() {
                 className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               />
             </div>
+            <div className="grid grid-cols-3 gap-4">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={form.promptConfig.multiDocPerFile ?? false}
+                  onChange={(e) =>
+                    updatePromptConfig({ multiDocPerFile: e.target.checked || undefined })
+                  }
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                Multi-doc per file
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={form.promptConfig.imageQualityAssessment ?? false}
+                  onChange={(e) =>
+                    updatePromptConfig({ imageQualityAssessment: e.target.checked || undefined })
+                  }
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                Image quality assessment
+              </label>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Temperature
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                  value={form.promptConfig.temperature ?? ""}
+                  onChange={(e) =>
+                    updatePromptConfig({ temperature: e.target.value !== "" ? Number(e.target.value) : undefined })
+                  }
+                  placeholder="0"
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+            </div>
+            <details className="mt-2">
+              <summary className="text-xs font-medium text-gray-500 cursor-pointer hover:text-gray-700">
+                Advanced Overrides
+              </summary>
+              <div className="space-y-4 mt-3 p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Custom System Prompt (overrides auto-generation)
+                  </label>
+                  <textarea
+                    value={form.promptConfig.customSystemPrompt || ""}
+                    onChange={(e) =>
+                      updatePromptConfig({ customSystemPrompt: e.target.value || undefined })
+                    }
+                    rows={4}
+                    placeholder="Leave empty to use auto-generated prompt. If set, replaces the entire system prompt. Supports ${variable} substitution from job metadata."
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Custom Analysis Prompt (overrides cross-doc validation prompt)
+                  </label>
+                  <textarea
+                    value={form.promptConfig.customAnalysisPrompt || ""}
+                    onChange={(e) =>
+                      updatePromptConfig({ customAnalysisPrompt: e.target.value || undefined })
+                    }
+                    rows={4}
+                    placeholder="Leave empty to use auto-generated analysis prompt. If set, replaces the cross-document validation prompt."
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none font-mono"
+                  />
+                </div>
+              </div>
+            </details>
           </div>
         </div>
 

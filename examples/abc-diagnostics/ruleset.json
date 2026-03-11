@@ -19,7 +19,8 @@
     "contextFields": [
       "clientName",
       "entityType"
-    ]
+    ],
+    "temperature": 0
   },
   "documentTypes": [
     {

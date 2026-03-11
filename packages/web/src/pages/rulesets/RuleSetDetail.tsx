@@ -551,16 +551,14 @@ function PromptConfigTab({ ruleSet }: { ruleSet: RuleSet }) {
   const knownFields: { key: string; label: string }[] = [
     { key: "role", label: "Role" },
     { key: "organizationContext", label: "Organization Context" },
-    { key: "customSystemPrompt", label: "Custom System Prompt" },
-    { key: "systemPrompt", label: "System Prompt" },
-    { key: "customAnalysisPrompt", label: "Custom Analysis Prompt" },
     { key: "customInstructions", label: "Custom Instructions" },
-    { key: "extractionInstructions", label: "Extraction Instructions" },
     { key: "contextFields", label: "Context Fields" },
     { key: "nameMatching", label: "Name Matching" },
     { key: "multiDocPerFile", label: "Multi-Doc Per File" },
     { key: "imageQualityAssessment", label: "Image Quality Assessment" },
     { key: "temperature", label: "Temperature" },
+    { key: "customSystemPrompt", label: "Custom System Prompt (Override)" },
+    { key: "customAnalysisPrompt", label: "Custom Analysis Prompt (Override)" },
   ];
 
   // Collect all keys present in the config

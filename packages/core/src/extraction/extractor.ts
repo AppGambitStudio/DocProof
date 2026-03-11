@@ -142,7 +142,8 @@ async function invokeModel(
   systemPrompt: string,
   docBytes: Buffer,
   mediaType: string,
-  maxRetries: number
+  maxRetries: number,
+  temperature?: number
 ): Promise<{ analyses: DocumentAnalysis[]; tokenUsageEntry: TokenUsage }> {
   console.log("Invoking Bedrock model via Converse API:", { modelId, mediaType });
 
@@ -160,6 +161,7 @@ async function invokeModel(
     ],
     inferenceConfig: {
       maxTokens: 4000,
+      ...(temperature !== undefined ? { temperature } : {}),
     },
   });
 
@@ -262,6 +264,7 @@ export async function extractDocument(
     ? buildSystemPrompt(config.ruleSet, config.metadata ?? {})
     : buildSimpleExtractionPrompt(docType);
 
+  const temperature = config.ruleSet?.promptConfig?.temperature;
   const tokenUsageEntries: TokenUsage[] = [];
 
   // Phase 1: Try with Haiku
@@ -271,7 +274,8 @@ export async function extractDocument(
     systemPrompt,
     file.data,
     file.mimeType,
-    maxRetries
+    maxRetries,
+    temperature
   );
   tokenUsageEntries.push(tokenUsageEntry);
 
@@ -289,7 +293,8 @@ export async function extractDocument(
       systemPrompt,
       file.data,
       file.mimeType,
-      maxRetries
+      maxRetries,
+      temperature
     );
     analyses = sonnetResult.analyses;
     tokenUsageEntries.push(sonnetResult.tokenUsageEntry);

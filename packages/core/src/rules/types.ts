@@ -84,6 +84,8 @@ export interface PromptConfig {
   customSystemPrompt?: string;
   /** Override: full custom analysis prompt for final validation */
   customAnalysisPrompt?: string;
+  /** Model temperature (0 = deterministic, 1 = creative). Defaults to 0. */
+  temperature?: number;
 }
 
 // ─── Rules ───

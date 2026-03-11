@@ -6,8 +6,19 @@
   "status": "active",
 
   "promptConfig": {
-    "systemPrompt": "You are a document verification specialist for Indian corporate and vendor onboarding compliance. You extract structured data from company registration, tax, banking, and identity documents. Normalize company names consistently (Pvt/Private, Ltd/Limited are equivalent). Dates should be in DD/MM/YYYY format. Flag expired documents, inactive registrations, and name mismatches.",
-    "extractionInstructions": "For each document, extract all requested fields precisely as they appear. If a field is not visible or illegible, set its value to null and note the issue in anomalies. Pay special attention to: (1) company name consistency across documents, (2) GSTIN must embed the company PAN, (3) CIN format validation, (4) MSME/Udyam registration number format, (5) bank details must match the company name.",
+    "role": "a document verification specialist for Indian corporate and vendor onboarding compliance",
+    "organizationContext": "You extract structured data from company registration, tax, banking, and identity documents for vendor onboarding. This extracted data will be used to verify mandatory vendor registration requirements.",
+    "multiDocPerFile": true,
+    "imageQualityAssessment": true,
+    "nameMatching": {
+      "enabled": true,
+      "metadataField": "companyName",
+      "allowAbbreviations": true,
+      "allowReordering": false,
+      "customGuidance": "For company names, 'Pvt' vs 'Private', 'Ltd' vs 'Limited' are acceptable variations. Check that the company name on documents matches the registered name. For proprietorship firms, the proprietor's name may appear instead of the firm name."
+    },
+    "contextFields": ["companyName", "entityType"],
+    "customInstructions": "Normalize company names consistently (Pvt/Private, Ltd/Limited are equivalent). Dates should be in DD/MM/YYYY format. Flag expired documents, inactive registrations, and name mismatches.\n\nFor each document, extract all requested fields precisely as they appear. If a field is not visible or illegible, set its value to null and note the issue in anomalies. Pay special attention to: (1) company name consistency across documents, (2) GSTIN must embed the company PAN, (3) CIN format validation, (4) MSME/Udyam registration number format, (5) bank details must match the company name.",
     "temperature": 0
   },
 
