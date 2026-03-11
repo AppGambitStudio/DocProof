@@ -616,7 +616,7 @@ export function RuleSetForm() {
                 {/* Satisfies Types */}
                 <div className="mb-3">
                   <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Satisfies Types (comma-separated typeIds)
+                    Also counts as (comma-separated typeIds)
                   </label>
                   <input
                     type="text"
@@ -633,7 +633,8 @@ export function RuleSetForm() {
                     className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                   />
                   <p className="text-xs text-gray-400 mt-1">
-                    Other document types this can satisfy (e.g., aadhaar_card satisfies address_proof)
+                    If this document can substitute for another required type, list those typeIds here.
+                    Example: set "address_proof" on Aadhaar Card, because an Aadhaar can also serve as address proof.
                   </p>
                 </div>
 

@@ -315,7 +315,7 @@ function DocumentTypesTab({ ruleSet }: { ruleSet: RuleSet }) {
 
           {dt.satisfiesTypes && dt.satisfiesTypes.length > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-100">
-              <span className="text-xs text-gray-500">Satisfies types: </span>
+              <span className="text-xs text-gray-500">Also counts as: </span>
               <div className="mt-1 flex flex-wrap gap-1">
                 {dt.satisfiesTypes.map((tid) => (
                   <span
