@@ -1,3 +1,5 @@
+// ─── Web types — aligned with @docproof/core/rules/types ───
+
 export interface FieldDefinition {
   name: string;
   label: string;
@@ -6,9 +8,10 @@ export interface FieldDefinition {
 }
 
 export interface ExtractionFieldRule {
-  aliases?: string[];
+  instructions?: string;
   format?: string;
-  required?: boolean;
+  maskExtraction?: boolean;
+  maskInstructions?: string;
 }
 
 export interface DocumentTypeConfig {
@@ -25,39 +28,73 @@ export interface DocumentTypeConfig {
   category?: string;
 }
 
-export interface FieldRule {
-  documentType: string;
-  field: string;
-  validations: FieldValidation[];
+// Validation type — flat representation of the core discriminated union.
+// Each validation has a `type` plus type-specific fields.
+export interface Validation {
+  type: string;
+  // regex
+  pattern?: string;
+  message?: string;
+  // length / numeric_range / date_range
+  min?: number | string;
+  max?: number | string;
+  // enum
+  values?: string[];
+  // date_format / date_range
+  format?: string;
+  relative?: string;
+  // checksum
+  algorithm?: string;
+  // custom_llm
+  prompt?: string;
 }
 
-export interface FieldValidation {
-  type: string;
-  value?: string | number | boolean;
-  message?: string;
+export interface FieldRule {
+  id: string;
+  documentType: string;
+  field: string;
+  validations: Validation[];
 }
 
 export interface CrossDocRule {
   id: string;
   description: string;
-  sourceDocType: string;
+  sourceDoc: string;
   sourceField: string;
-  targetDocType: string;
+  targetDoc: string;
   targetField: string;
-  matchType: "exact" | "fuzzy" | "contains" | "date_range";
+  matchType: "exact" | "fuzzy" | "contains" | "semantic";
   threshold?: number;
 }
 
 export interface MetadataRule {
+  id: string;
   field: string;
-  validations: FieldValidation[];
+  validations: Validation[];
+}
+
+export interface NameMatchConfig {
+  enabled: boolean;
+  metadataField?: string;
+  allowAbbreviations?: boolean;
+  allowReordering?: boolean;
+  customGuidance?: string;
 }
 
 export interface PromptConfig {
   role?: string;
-  orgContext?: string;
-  nameMatchingConfig?: Record<string, unknown>;
+  organizationContext?: string;
+  multiDocPerFile?: boolean;
+  imageQualityAssessment?: boolean;
+  nameMatching?: NameMatchConfig;
+  customInstructions?: string;
   contextFields?: string[];
+  customSystemPrompt?: string;
+  customAnalysisPrompt?: string;
+  // Free-form fields used by example rulesets
+  systemPrompt?: string;
+  extractionInstructions?: string;
+  temperature?: number;
 }
 
 export interface RuleSet {
@@ -73,46 +110,4 @@ export interface RuleSet {
   promptConfig?: PromptConfig;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface Job {
-  id: string;
-  ruleSetId: string;
-  status: "created" | "uploading" | "processing" | "extracting" | "validating" | "completed" | "failed" | "review_required";
-  createdAt: string;
-  updatedAt: string;
-  result?: JobResult;
-}
-
-export interface JobResult {
-  id: string;
-  jobId: string;
-  overallStatus: "pass" | "fail" | "review";
-  documentResults: DocumentResult[];
-  crossDocResults: CrossDocCheckResult[];
-  completedAt: string;
-}
-
-export interface DocumentResult {
-  documentType: string;
-  fileName: string;
-  status: "pass" | "fail" | "review";
-  extractedFields: Record<string, unknown>;
-  fieldChecks: FieldCheck[];
-  flags: string[];
-}
-
-export interface FieldCheck {
-  field: string;
-  status: "pass" | "fail";
-  expected?: string;
-  actual?: string;
-  message?: string;
-}
-
-export interface CrossDocCheckResult {
-  ruleId: string;
-  description: string;
-  status: "pass" | "fail";
-  details?: string;
 }

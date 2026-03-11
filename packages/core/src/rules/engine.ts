@@ -18,6 +18,21 @@ interface EngineInput {
 }
 
 /**
+ * Unwrap a field value that may have been returned as an object by the LLM.
+ * Handles cases like: { "value": "John Doe", "confidence": 0.9 }
+ * Returns the flat value (string, number, boolean, or null).
+ */
+function unwrapFieldValue(raw: unknown): unknown {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) return raw;
+  // If it's an object with a "value" key, extract it
+  const obj = raw as Record<string, unknown>;
+  if ("value" in obj) return obj.value ?? null;
+  // Otherwise return as-is (could be a legitimate nested object)
+  return raw;
+}
+
+/**
  * Evaluate field rules against a single document analysis.
  */
 function evaluateFieldRules(
@@ -30,7 +45,7 @@ function evaluateFieldRules(
   );
 
   for (const rule of docRules) {
-    const value = analysis.extractedFields[rule.field] ?? null;
+    const value = unwrapFieldValue(analysis.extractedFields[rule.field]) ?? null;
 
     const { results: validationResults } = runAllValidations(
       value,
@@ -181,10 +196,10 @@ export function evaluate(input: EngineInput): JobResult {
     if (!sourceAnalysis || !targetAnalysis) continue;
 
     const sourceVal = String(
-      sourceAnalysis.extractedFields[rule.sourceField] ?? ""
+      unwrapFieldValue(sourceAnalysis.extractedFields[rule.sourceField]) ?? ""
     );
     const targetVal = String(
-      targetAnalysis.extractedFields[rule.targetField] ?? ""
+      unwrapFieldValue(targetAnalysis.extractedFields[rule.targetField]) ?? ""
     );
 
     let match = false;

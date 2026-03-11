@@ -366,7 +366,7 @@ function DocumentCard({ doc }: { doc: DocumentResultDetail }) {
                           {fr.field}
                         </td>
                         <td className="px-3 py-2 text-xs text-gray-600">
-                          {fr.rule}
+                          {fr.ruleId}
                         </td>
                         <td className="px-3 py-2">
                           <StatusBadge status={fr.status} />

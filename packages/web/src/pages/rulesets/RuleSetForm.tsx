@@ -6,7 +6,7 @@ import {
   DocumentTypeConfig,
   FieldDefinition,
   FieldRule,
-  FieldValidation,
+  Validation,
   MetadataRule,
   PromptConfig,
   RuleSet,
@@ -41,13 +41,12 @@ const emptyField: FieldDefinition = {
   type: "string",
 };
 
-const emptyFieldValidation: FieldValidation = {
+const emptyValidation: Validation = {
   type: "required",
-  value: undefined,
-  message: "",
 };
 
 const emptyFieldRule: FieldRule = {
+  id: "",
   documentType: "",
   field: "",
   validations: [],
@@ -56,28 +55,30 @@ const emptyFieldRule: FieldRule = {
 const emptyCrossDocRule: CrossDocRule = {
   id: "",
   description: "",
-  sourceDocType: "",
+  sourceDoc: "",
   sourceField: "",
-  targetDocType: "",
+  targetDoc: "",
   targetField: "",
   matchType: "exact",
 };
 
 const emptyMetadataRule: MetadataRule = {
+  id: "",
   field: "",
   validations: [],
 };
 
+// Must match core validator registry type names
 const validationTypes = [
   "required",
   "regex",
-  "min_length",
-  "max_length",
+  "length",
   "enum",
+  "numeric_range",
   "checksum",
   "date_format",
-  "min",
-  "max",
+  "date_range",
+  "custom_llm",
 ];
 
 export function RuleSetForm() {
@@ -158,7 +159,7 @@ export function RuleSetForm() {
         crossDocRules: form.crossDocRules,
         metadataRules: form.metadataRules,
         promptConfig:
-          form.promptConfig.role || form.promptConfig.orgContext || (form.promptConfig.contextFields && form.promptConfig.contextFields.length > 0)
+          form.promptConfig.role || form.promptConfig.organizationContext || (form.promptConfig.contextFields && form.promptConfig.contextFields.length > 0)
             ? form.promptConfig
             : undefined,
       };
@@ -257,7 +258,7 @@ export function RuleSetForm() {
   function addValidationToFieldRule(ruleIndex: number) {
     const rule = form.fieldRules[ruleIndex];
     updateFieldRule(ruleIndex, {
-      validations: [...rule.validations, { ...emptyFieldValidation }],
+      validations: [...rule.validations, { ...emptyValidation }],
     });
   }
 
@@ -271,7 +272,7 @@ export function RuleSetForm() {
   function updateValidationInFieldRule(
     ruleIndex: number,
     valIndex: number,
-    updates: Partial<FieldValidation>
+    updates: Partial<Validation>
   ) {
     const rule = form.fieldRules[ruleIndex];
     updateFieldRule(ruleIndex, {
@@ -332,7 +333,7 @@ export function RuleSetForm() {
   function addValidationToMetadataRule(ruleIndex: number) {
     const rule = form.metadataRules[ruleIndex];
     updateMetadataRule(ruleIndex, {
-      validations: [...rule.validations, { ...emptyFieldValidation }],
+      validations: [...rule.validations, { ...emptyValidation }],
     });
   }
 
@@ -346,7 +347,7 @@ export function RuleSetForm() {
   function updateValidationInMetadataRule(
     ruleIndex: number,
     valIndex: number,
-    updates: Partial<FieldValidation>
+    updates: Partial<Validation>
   ) {
     const rule = form.metadataRules[ruleIndex];
     updateMetadataRule(ruleIndex, {
@@ -758,7 +759,21 @@ export function RuleSetForm() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="grid grid-cols-3 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Rule ID
+                    </label>
+                    <input
+                      type="text"
+                      value={rule.id}
+                      onChange={(e) =>
+                        updateFieldRule(rIndex, { id: e.target.value })
+                      }
+                      placeholder="e.g., fr_pan_format"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Document Type
@@ -809,14 +824,13 @@ export function RuleSetForm() {
                   {rule.validations.map((val, vIndex) => (
                     <div
                       key={vIndex}
-                      className="flex items-center gap-2 mb-2"
+                      className="flex items-center gap-2 mb-2 flex-wrap"
                     >
                       <select
                         value={val.type}
                         onChange={(e) =>
                           updateValidationInFieldRule(rIndex, vIndex, {
                             type: e.target.value,
-                            value: e.target.value === "required" ? undefined : val.value,
                           })
                         }
                         className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none bg-white"
@@ -827,16 +841,84 @@ export function RuleSetForm() {
                           </option>
                         ))}
                       </select>
-                      {val.type !== "required" && (
+                      {val.type === "regex" && (
                         <input
                           type="text"
-                          value={val.value !== undefined && val.value !== null ? String(val.value) : ""}
+                          value={val.pattern || ""}
                           onChange={(e) =>
-                            updateValidationInFieldRule(rIndex, vIndex, {
-                              value: e.target.value,
-                            })
+                            updateValidationInFieldRule(rIndex, vIndex, { pattern: e.target.value })
                           }
-                          placeholder="Value"
+                          placeholder="Pattern (regex)"
+                          className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                        />
+                      )}
+                      {(val.type === "length" || val.type === "numeric_range" || val.type === "date_range") && (
+                        <>
+                          <input
+                            type="text"
+                            value={val.min !== undefined && val.min !== null ? String(val.min) : ""}
+                            onChange={(e) =>
+                              updateValidationInFieldRule(rIndex, vIndex, { min: e.target.value ? Number(e.target.value) || e.target.value : undefined })
+                            }
+                            placeholder="Min"
+                            className="w-20 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={val.max !== undefined && val.max !== null ? String(val.max) : ""}
+                            onChange={(e) =>
+                              updateValidationInFieldRule(rIndex, vIndex, { max: e.target.value ? Number(e.target.value) || e.target.value : undefined })
+                            }
+                            placeholder="Max"
+                            className="w-20 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                          />
+                        </>
+                      )}
+                      {val.type === "enum" && (
+                        <input
+                          type="text"
+                          value={(val.values ?? []).join(", ")}
+                          onChange={(e) =>
+                            updateValidationInFieldRule(rIndex, vIndex, { values: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })
+                          }
+                          placeholder="Values (comma-separated)"
+                          className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                        />
+                      )}
+                      {val.type === "checksum" && (
+                        <select
+                          value={val.algorithm || ""}
+                          onChange={(e) =>
+                            updateValidationInFieldRule(rIndex, vIndex, { algorithm: e.target.value })
+                          }
+                          className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none bg-white"
+                        >
+                          <option value="">Select algorithm</option>
+                          <option value="pan">PAN</option>
+                          <option value="gstin">GSTIN</option>
+                          <option value="aadhaar">Aadhaar</option>
+                          <option value="luhn">Luhn</option>
+                        </select>
+                      )}
+                      {(val.type === "date_format") && (
+                        <input
+                          type="text"
+                          value={val.format || ""}
+                          onChange={(e) =>
+                            updateValidationInFieldRule(rIndex, vIndex, { format: e.target.value })
+                          }
+                          placeholder="Format (e.g., dd-mm-yyyy)"
+                          className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                        />
+                      )}
+                      {val.type === "custom_llm" && (
+                        <input
+                          type="text"
+                          value={val.prompt || ""}
+                          onChange={(e) =>
+                            updateValidationInFieldRule(rIndex, vIndex, { prompt: e.target.value })
+                          }
+                          placeholder="LLM validation prompt"
                           className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
                         />
                       )}
@@ -977,9 +1059,9 @@ export function RuleSetForm() {
                     </label>
                     <input
                       type="text"
-                      value={rule.sourceDocType}
+                      value={rule.sourceDoc}
                       onChange={(e) =>
-                        updateCrossDocRule(rIndex, { sourceDocType: e.target.value })
+                        updateCrossDocRule(rIndex, { sourceDoc: e.target.value })
                       }
                       placeholder="e.g., pan_card"
                       className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
@@ -1005,9 +1087,9 @@ export function RuleSetForm() {
                     </label>
                     <input
                       type="text"
-                      value={rule.targetDocType}
+                      value={rule.targetDoc}
                       onChange={(e) =>
-                        updateCrossDocRule(rIndex, { targetDocType: e.target.value })
+                        updateCrossDocRule(rIndex, { targetDoc: e.target.value })
                       }
                       placeholder="e.g., aadhaar_card"
                       className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
@@ -1044,7 +1126,7 @@ export function RuleSetForm() {
                       <option value="exact">exact</option>
                       <option value="fuzzy">fuzzy</option>
                       <option value="contains">contains</option>
-                      <option value="date_range">date_range</option>
+                      <option value="semantic">semantic</option>
                     </select>
                   </div>
                   {rule.matchType === "fuzzy" && (
@@ -1137,19 +1219,35 @@ export function RuleSetForm() {
                   </button>
                 </div>
 
-                <div className="mb-3">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Field Name
-                  </label>
-                  <input
-                    type="text"
-                    value={rule.field}
-                    onChange={(e) =>
-                      updateMetadataRule(rIndex, { field: e.target.value })
-                    }
-                    placeholder="e.g., applicant_name"
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                  />
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Rule ID
+                    </label>
+                    <input
+                      type="text"
+                      value={rule.id}
+                      onChange={(e) =>
+                        updateMetadataRule(rIndex, { id: e.target.value })
+                      }
+                      placeholder="e.g., mr_applicant_name"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Field Name
+                    </label>
+                    <input
+                      type="text"
+                      value={rule.field}
+                      onChange={(e) =>
+                        updateMetadataRule(rIndex, { field: e.target.value })
+                      }
+                      placeholder="e.g., applicant_name"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
                 </div>
 
                 {/* Validations */}
@@ -1172,14 +1270,13 @@ export function RuleSetForm() {
                   {rule.validations.map((val, vIndex) => (
                     <div
                       key={vIndex}
-                      className="flex items-center gap-2 mb-2"
+                      className="flex items-center gap-2 mb-2 flex-wrap"
                     >
                       <select
                         value={val.type}
                         onChange={(e) =>
                           updateValidationInMetadataRule(rIndex, vIndex, {
                             type: e.target.value,
-                            value: e.target.value === "required" ? undefined : val.value,
                           })
                         }
                         className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none bg-white"
@@ -1190,16 +1287,84 @@ export function RuleSetForm() {
                           </option>
                         ))}
                       </select>
-                      {val.type !== "required" && (
+                      {val.type === "regex" && (
                         <input
                           type="text"
-                          value={val.value !== undefined && val.value !== null ? String(val.value) : ""}
+                          value={val.pattern || ""}
                           onChange={(e) =>
-                            updateValidationInMetadataRule(rIndex, vIndex, {
-                              value: e.target.value,
-                            })
+                            updateValidationInMetadataRule(rIndex, vIndex, { pattern: e.target.value })
                           }
-                          placeholder="Value"
+                          placeholder="Pattern (regex)"
+                          className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                        />
+                      )}
+                      {(val.type === "length" || val.type === "numeric_range" || val.type === "date_range") && (
+                        <>
+                          <input
+                            type="text"
+                            value={val.min !== undefined && val.min !== null ? String(val.min) : ""}
+                            onChange={(e) =>
+                              updateValidationInMetadataRule(rIndex, vIndex, { min: e.target.value ? Number(e.target.value) || e.target.value : undefined })
+                            }
+                            placeholder="Min"
+                            className="w-20 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                          />
+                          <input
+                            type="text"
+                            value={val.max !== undefined && val.max !== null ? String(val.max) : ""}
+                            onChange={(e) =>
+                              updateValidationInMetadataRule(rIndex, vIndex, { max: e.target.value ? Number(e.target.value) || e.target.value : undefined })
+                            }
+                            placeholder="Max"
+                            className="w-20 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                          />
+                        </>
+                      )}
+                      {val.type === "enum" && (
+                        <input
+                          type="text"
+                          value={(val.values ?? []).join(", ")}
+                          onChange={(e) =>
+                            updateValidationInMetadataRule(rIndex, vIndex, { values: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })
+                          }
+                          placeholder="Values (comma-separated)"
+                          className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                        />
+                      )}
+                      {val.type === "checksum" && (
+                        <select
+                          value={val.algorithm || ""}
+                          onChange={(e) =>
+                            updateValidationInMetadataRule(rIndex, vIndex, { algorithm: e.target.value })
+                          }
+                          className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none bg-white"
+                        >
+                          <option value="">Select algorithm</option>
+                          <option value="pan">PAN</option>
+                          <option value="gstin">GSTIN</option>
+                          <option value="aadhaar">Aadhaar</option>
+                          <option value="luhn">Luhn</option>
+                        </select>
+                      )}
+                      {(val.type === "date_format") && (
+                        <input
+                          type="text"
+                          value={val.format || ""}
+                          onChange={(e) =>
+                            updateValidationInMetadataRule(rIndex, vIndex, { format: e.target.value })
+                          }
+                          placeholder="Format (e.g., dd-mm-yyyy)"
+                          className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                        />
+                      )}
+                      {val.type === "custom_llm" && (
+                        <input
+                          type="text"
+                          value={val.prompt || ""}
+                          onChange={(e) =>
+                            updateValidationInMetadataRule(rIndex, vIndex, { prompt: e.target.value })
+                          }
+                          placeholder="LLM validation prompt"
                           className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
                         />
                       )}
@@ -1262,9 +1427,9 @@ export function RuleSetForm() {
                 Organization Context
               </label>
               <textarea
-                value={form.promptConfig.orgContext || ""}
+                value={form.promptConfig.organizationContext || ""}
                 onChange={(e) =>
-                  updatePromptConfig({ orgContext: e.target.value || undefined })
+                  updatePromptConfig({ organizationContext: e.target.value || undefined })
                 }
                 rows={3}
                 placeholder="Describe your organization context for AI extraction..."

@@ -64,8 +64,10 @@ export interface TokenUsage {
 
 export interface FieldValidationResult {
   field: string;
-  rule: string;
+  ruleId: string;
   status: "pass" | "fail" | "warn";
+  expected?: string;
+  actual?: string;
   message?: string;
 }
 
@@ -80,11 +82,12 @@ export interface DocumentResultDetail {
 }
 
 export interface CrossDocValidationResult {
+  ruleId: string;
   description: string;
   sourceValue?: string;
   targetValue?: string;
   status: "pass" | "fail" | "warn";
-  confidence?: string;
+  confidence?: number;
   reasoning?: string;
 }
 

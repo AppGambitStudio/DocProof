@@ -381,20 +381,28 @@ function FieldRulesTab({ ruleSet }: { ruleSet: RuleSet }) {
         </thead>
         <tbody className="divide-y divide-gray-200">
           {rules.map((rule, i) => (
-            <tr key={i}>
-              <td className="px-6 py-3 text-sm font-mono text-gray-600">{rule.documentType}</td>
+            <tr key={rule.id || i}>
+              <td className="px-6 py-3 text-sm font-mono text-gray-600">
+                {rule.id && <span className="text-gray-400 mr-2">{rule.id}</span>}
+                {rule.documentType}
+              </td>
               <td className="px-6 py-3 text-sm text-gray-900">{rule.field}</td>
               <td className="px-6 py-3">
                 <div className="flex flex-wrap gap-1">
-                  {rule.validations.map((v, vi) => (
-                    <span
-                      key={vi}
-                      className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded"
-                    >
-                      {v.type}
-                      {v.value !== undefined && `: ${v.value}`}
-                    </span>
-                  ))}
+                  {rule.validations.map((v, vi) => {
+                    const detail = v.pattern || v.algorithm || v.format || v.prompt
+                      || (v.values ? v.values.join(", ") : null)
+                      || (v.min !== undefined || v.max !== undefined ? `${v.min ?? "∞"}–${v.max ?? "∞"}` : null);
+                    return (
+                      <span
+                        key={vi}
+                        className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded"
+                      >
+                        {v.type}
+                        {detail && `: ${detail}`}
+                      </span>
+                    );
+                  })}
                 </div>
               </td>
             </tr>
@@ -444,12 +452,12 @@ function CrossDocRulesTab({ ruleSet }: { ruleSet: RuleSet }) {
             <tr key={rule.id}>
               <td className="px-6 py-3 text-sm text-gray-900">{rule.description}</td>
               <td className="px-6 py-3 text-sm text-gray-600">
-                <span className="font-mono text-xs">{rule.sourceDocType}</span>
+                <span className="font-mono text-xs">{rule.sourceDoc}</span>
                 <span className="text-gray-400 mx-1">.</span>
                 <span>{rule.sourceField}</span>
               </td>
               <td className="px-6 py-3 text-sm text-gray-600">
-                <span className="font-mono text-xs">{rule.targetDocType}</span>
+                <span className="font-mono text-xs">{rule.targetDoc}</span>
                 <span className="text-gray-400 mx-1">.</span>
                 <span>{rule.targetField}</span>
               </td>
@@ -496,19 +504,27 @@ function MetadataRulesTab({ ruleSet }: { ruleSet: RuleSet }) {
         </thead>
         <tbody className="divide-y divide-gray-200">
           {rules.map((rule, i) => (
-            <tr key={i}>
-              <td className="px-6 py-3 text-sm font-medium text-gray-900">{rule.field}</td>
+            <tr key={rule.id || i}>
+              <td className="px-6 py-3 text-sm font-medium text-gray-900">
+                {rule.id && <span className="text-gray-400 font-mono text-xs mr-2">{rule.id}</span>}
+                {rule.field}
+              </td>
               <td className="px-6 py-3">
                 <div className="flex flex-wrap gap-1">
-                  {rule.validations.map((v, vi) => (
-                    <span
-                      key={vi}
-                      className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded"
-                    >
-                      {v.type}
-                      {v.value !== undefined && `: ${v.value}`}
-                    </span>
-                  ))}
+                  {rule.validations.map((v, vi) => {
+                    const detail = v.pattern || v.algorithm || v.format || v.prompt
+                      || (v.values ? v.values.join(", ") : null)
+                      || (v.min !== undefined || v.max !== undefined ? `${v.min ?? "∞"}–${v.max ?? "∞"}` : null);
+                    return (
+                      <span
+                        key={vi}
+                        className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded"
+                      >
+                        {v.type}
+                        {detail && `: ${detail}`}
+                      </span>
+                    );
+                  })}
                 </div>
               </td>
             </tr>
@@ -531,48 +547,109 @@ function PromptConfigTab({ ruleSet }: { ruleSet: RuleSet }) {
     );
   }
 
+  // Known fields with nice labels (rendered first, in order)
+  const knownFields: { key: string; label: string }[] = [
+    { key: "role", label: "Role" },
+    { key: "organizationContext", label: "Organization Context" },
+    { key: "customSystemPrompt", label: "Custom System Prompt" },
+    { key: "systemPrompt", label: "System Prompt" },
+    { key: "customAnalysisPrompt", label: "Custom Analysis Prompt" },
+    { key: "customInstructions", label: "Custom Instructions" },
+    { key: "extractionInstructions", label: "Extraction Instructions" },
+    { key: "contextFields", label: "Context Fields" },
+    { key: "nameMatching", label: "Name Matching" },
+    { key: "multiDocPerFile", label: "Multi-Doc Per File" },
+    { key: "imageQualityAssessment", label: "Image Quality Assessment" },
+    { key: "temperature", label: "Temperature" },
+  ];
+
+  // Collect all keys present in the config
+  const renderedKeys = new Set<string>();
+
+  function renderValue(key: string, value: unknown) {
+    if (value === null || value === undefined) return null;
+    renderedKeys.add(key);
+
+    if (typeof value === "boolean") {
+      return (
+        <span className={`px-2 py-0.5 text-xs rounded font-medium ${value ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+          {value ? "Enabled" : "Disabled"}
+        </span>
+      );
+    }
+
+    if (typeof value === "number") {
+      return <span className="text-sm font-mono text-gray-900">{value}</span>;
+    }
+
+    if (Array.isArray(value)) {
+      return (
+        <div className="flex flex-wrap gap-1">
+          {value.map((item, i) => (
+            <span key={i} className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded">
+              {typeof item === "string" ? item : JSON.stringify(item)}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
+    if (typeof value === "object") {
+      return (
+        <pre className="text-xs text-gray-700 bg-gray-50 rounded p-3 overflow-x-auto">
+          {JSON.stringify(value, null, 2)}
+        </pre>
+      );
+    }
+
+    // String — render as preformatted text for long content
+    const str = String(value);
+    if (str.length > 120) {
+      return <p className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 rounded p-3">{str}</p>;
+    }
+    return <p className="text-sm text-gray-900">{str}</p>;
+  }
+
+  // Cast to Record for dynamic key access (API may return extra fields)
+  const configRecord = config as unknown as Record<string, unknown>;
+
+  // Remaining keys not in the known list
+  const allKeys = Object.keys(configRecord);
+  const extraKeys = allKeys.filter(
+    (k) => !knownFields.some((kf) => kf.key === k) && configRecord[k] !== null && configRecord[k] !== undefined
+  );
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
-      {config.role && (
-        <div>
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-            Role
-          </label>
-          <p className="mt-1 text-sm text-gray-900">{config.role}</p>
-        </div>
-      )}
-      {config.orgContext && (
-        <div>
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-            Organization Context
-          </label>
-          <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{config.orgContext}</p>
-        </div>
-      )}
-      {config.contextFields && config.contextFields.length > 0 && (
-        <div>
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-            Context Fields
-          </label>
-          <div className="mt-1 flex flex-wrap gap-1">
-            {config.contextFields.map((f) => (
-              <span key={f} className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded">
-                {f}
-              </span>
-            ))}
+    <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-5">
+      {knownFields.map(({ key, label }) => {
+        const value = configRecord[key];
+        if (value === null || value === undefined || value === "") return null;
+        // Skip empty arrays/objects
+        if (typeof value === "object" && !Array.isArray(value) && Object.keys(value as object).length === 0) return null;
+        if (Array.isArray(value) && value.length === 0) return null;
+
+        return (
+          <div key={key}>
+            <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+              {label}
+            </label>
+            <div className="mt-1">{renderValue(key, value)}</div>
           </div>
-        </div>
-      )}
-      {config.nameMatchingConfig && Object.keys(config.nameMatchingConfig).length > 0 && (
-        <div>
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-            Name Matching Config
-          </label>
-          <pre className="mt-1 text-xs text-gray-700 bg-gray-50 rounded p-3 overflow-x-auto">
-            {JSON.stringify(config.nameMatchingConfig, null, 2)}
-          </pre>
-        </div>
-      )}
+        );
+      })}
+      {extraKeys.map((key) => {
+        const value = configRecord[key];
+        if (renderedKeys.has(key)) return null;
+
+        return (
+          <div key={key}>
+            <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+              {key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase())}
+            </label>
+            <div className="mt-1">{renderValue(key, value)}</div>
+          </div>
+        );
+      })}
     </div>
   );
 }

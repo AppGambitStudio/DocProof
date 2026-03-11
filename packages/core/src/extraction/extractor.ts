@@ -87,7 +87,7 @@ function buildContentBlocks(
   }
 
   blocks.push({
-    text: "Analyze this file and extract all relevant information. If this file contains multiple distinct documents (e.g., two ID cards in one photo, or different documents across PDF pages), return a separate entry for each. Return the result as a JSON array.",
+    text: "Analyze this file and extract all relevant information according to the system instructions. Use the exact typeId values for documentType and flat values (not nested objects) for extractedFields. If this file contains multiple distinct documents, return a separate entry for each. Return the result as a JSON array.",
   });
 
   return blocks;
@@ -100,7 +100,7 @@ function buildSimpleExtractionPrompt(docType: DocumentTypeConfig): string {
     .join("\n");
 
   return `You are a document extraction specialist.
-You are processing a: ${docType.label}
+You are processing a: ${docType.label} (typeId: "${docType.typeId}")
 
 ${docType.extractionPrompt}
 
@@ -111,6 +111,8 @@ RULES:
 - Return ONLY valid JSON array, no markdown fences, no preamble
 - Each element represents a distinct document found in the file
 - Use the exact field names listed above in "extractedFields"
+- Use FLAT values in extractedFields (string, number, boolean, or null). Do NOT wrap values in objects like {"value": "...", "confidence": 0.9}
+- The "documentType" field MUST be exactly "${docType.typeId}" — do not use the label or any other variation
 - Include confidence as "HIGH", "MEDIUM", or "LOW"
 - Include anomalies as an array of strings (empty if none)
 
@@ -118,7 +120,9 @@ Return a JSON array:
 [
   {
     "documentType": "${docType.typeId}",
-    "extractedFields": { ... },
+    "extractedFields": {
+      "field_name": "extracted value or null"
+    },
     "confidence": "HIGH" | "MEDIUM" | "LOW",
     "anomalies": [],
     "observations": "summary"
@@ -201,19 +205,32 @@ async function invokeModel(
   }
 
   try {
+    let analyses: DocumentAnalysis[] | null = null;
     if (arrayMatch) {
       const parsed = JSON.parse(arrayMatch[0]);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return { analyses: parsed as DocumentAnalysis[], tokenUsageEntry };
+        analyses = parsed as DocumentAnalysis[];
       }
     }
-    if (objectMatch) {
-      return {
-        analyses: [JSON.parse(objectMatch[0]) as DocumentAnalysis],
-        tokenUsageEntry,
-      };
+    if (!analyses && objectMatch) {
+      analyses = [JSON.parse(objectMatch[0]) as DocumentAnalysis];
     }
-    return { analyses: [fallbackAnalysis], tokenUsageEntry };
+    if (!analyses) {
+      return { analyses: [fallbackAnalysis], tokenUsageEntry };
+    }
+
+    // Normalize: flatten any nested {value, confidence} objects in extractedFields
+    for (const analysis of analyses) {
+      if (analysis.extractedFields && typeof analysis.extractedFields === "object") {
+        for (const [key, val] of Object.entries(analysis.extractedFields)) {
+          if (val && typeof val === "object" && !Array.isArray(val) && "value" in (val as Record<string, unknown>)) {
+            analysis.extractedFields[key] = (val as Record<string, unknown>).value ?? null;
+          }
+        }
+      }
+    }
+
+    return { analyses, tokenUsageEntry };
   } catch {
     return {
       analyses: [

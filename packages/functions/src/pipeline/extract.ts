@@ -110,6 +110,8 @@ export const handler = async (
       return true;
     });
 
+    const validTypeIds = allDocTypes.map((dt) => `"${dt.typeId}"`).join(", ");
+
     docTypeConfig = {
       typeId: "auto",
       label: "Auto-detect",
@@ -118,7 +120,8 @@ export const handler = async (
       acceptedFormats: ["pdf", "jpg", "png", "tiff"],
       extractionPrompt:
         "Identify the document type and extract all relevant fields. " +
-        "The document could be any of the types listed in the supported document types section.",
+        "The document could be any of the types listed in the supported document types section. " +
+        `You MUST use one of these exact typeId values as the "documentType" in your response: ${validTypeIds}, or "UNKNOWN" if no match.`,
       expectedFields: uniqueFields,
     };
   } else {

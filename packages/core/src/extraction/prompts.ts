@@ -150,6 +150,9 @@ function buildDocumentTypesSection(docTypes: DocumentTypeConfig[]): string {
   }
 
   const sections: string[] = ["## Supported Document Types"];
+  sections.push(
+    "IMPORTANT: You MUST use the exact `typeId` value (shown in parentheses) as the `documentType` in your response. Do NOT use the label or any other variation.\n"
+  );
 
   for (const [category, types] of categorized) {
     if (categorized.size > 1) {
@@ -159,12 +162,18 @@ function buildDocumentTypesSection(docTypes: DocumentTypeConfig[]): string {
       const applicability = dt.applicableTo?.length
         ? ` (${dt.applicableTo.join(", ")})`
         : "";
-      sections.push(`- **${dt.label}**${applicability} — ${dt.extractionPrompt}`);
+      sections.push(`- **${dt.label}** (typeId: \`${dt.typeId}\`)${applicability} — ${dt.extractionPrompt}`);
     }
   }
 
   sections.push(
-    `- **UNKNOWN** — Use if the document does not match any type above`
+    `- **Unknown Document** (typeId: \`UNKNOWN\`) — Use if the document does not match any type above`
+  );
+
+  // Summary of valid typeIds for clarity
+  const validIds = docTypes.map((dt) => `"${dt.typeId}"`).join(", ");
+  sections.push(
+    `\nValid documentType values: ${validIds}, "UNKNOWN"`
   );
 
   return sections.join("\n");
@@ -293,11 +302,13 @@ Return a JSON array with the following structure:
 
 ${multiDocNote}${wrapper[0]}
   {
-    "documentType": "<DOCUMENT_TYPE_ID or UNKNOWN>",
+    "documentType": "<exact typeId from supported document types section, or UNKNOWN>",
     "extractedFields": {
       // Fields vary by document type — include only what is present and readable.
       // Use null for fields that should exist but are illegible or missing.
-      // For each field include: "value" (extracted value or null), "confidence" (0.0-1.0)
+      // IMPORTANT: Use FLAT values directly (string, number, boolean, or null).
+      // Do NOT nest values in objects. Correct: "full_name": "John Doe"
+      // Wrong: "full_name": {"value": "John Doe", "confidence": 0.9}
     },
 ${nameMatchFields}${dateFields}${qualityFields}    "confidence": "HIGH" | "MEDIUM" | "LOW",
     "confidenceReason": "Brief explanation of confidence level",
