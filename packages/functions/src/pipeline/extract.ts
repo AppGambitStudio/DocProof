@@ -78,31 +78,7 @@ export const handler = async (
     })
   );
 
-  const ruleSetItem = allDocTypeItems.find(
-    (item) => item.typeId === documentType
-  );
-
-  if (!ruleSetItem) {
-    throw new Error(
-      `Document type "${documentType}" not found in ruleset "${ruleSetId}"`
-    );
-  }
-
-  const docTypeConfig: DocumentTypeConfig = {
-    typeId: ruleSetItem.typeId,
-    label: ruleSetItem.label,
-    required: ruleSetItem.required,
-    maxCount: ruleSetItem.maxCount,
-    acceptedFormats: ruleSetItem.acceptedFormats,
-    extractionPrompt: ruleSetItem.extractionPrompt,
-    expectedFields: ruleSetItem.expectedFields,
-    fieldExtractionRules: ruleSetItem.fieldExtractionRules,
-    flagConditions: ruleSetItem.flagConditions,
-    applicableTo: ruleSetItem.applicableTo,
-    category: ruleSetItem.category,
-  };
-
-  // Build all document type configs for multi-doc context
+  // Build all document type configs (needed for auto-classification and multi-doc context)
   const allDocTypes: DocumentTypeConfig[] = allDocTypeItems.map((item) => ({
     typeId: item.typeId,
     label: item.label,
@@ -116,6 +92,60 @@ export const handler = async (
     applicableTo: item.applicableTo,
     category: item.category,
   }));
+
+  // Resolve the document type config for extraction.
+  // When documentType is "auto", the AI classifies the document — we pass a
+  // synthetic config with all expected fields so the prompt covers everything.
+  let docTypeConfig: DocumentTypeConfig;
+
+  if (documentType === "auto") {
+    // Auto-classification: merge all expected fields and prompts so the AI
+    // can identify the document type and extract relevant fields.
+    const allFields = allDocTypes.flatMap((dt) => dt.expectedFields);
+    // Deduplicate fields by name
+    const seen = new Set<string>();
+    const uniqueFields = allFields.filter((f) => {
+      if (seen.has(f.name)) return false;
+      seen.add(f.name);
+      return true;
+    });
+
+    docTypeConfig = {
+      typeId: "auto",
+      label: "Auto-detect",
+      required: false,
+      maxCount: 99,
+      acceptedFormats: ["pdf", "jpg", "png", "tiff"],
+      extractionPrompt:
+        "Identify the document type and extract all relevant fields. " +
+        "The document could be any of the types listed in the supported document types section.",
+      expectedFields: uniqueFields,
+    };
+  } else {
+    const ruleSetItem = allDocTypeItems.find(
+      (item) => item.typeId === documentType
+    );
+
+    if (!ruleSetItem) {
+      throw new Error(
+        `Document type "${documentType}" not found in ruleset "${ruleSetId}"`
+      );
+    }
+
+    docTypeConfig = {
+      typeId: ruleSetItem.typeId,
+      label: ruleSetItem.label,
+      required: ruleSetItem.required,
+      maxCount: ruleSetItem.maxCount,
+      acceptedFormats: ruleSetItem.acceptedFormats,
+      extractionPrompt: ruleSetItem.extractionPrompt,
+      expectedFields: ruleSetItem.expectedFields,
+      fieldExtractionRules: ruleSetItem.fieldExtractionRules,
+      flagConditions: ruleSetItem.flagConditions,
+      applicableTo: ruleSetItem.applicableTo,
+      category: ruleSetItem.category,
+    };
+  }
 
   // Build RuleSet object for prompt generation (if promptConfig exists)
   const ruleSet: RuleSet | undefined = ruleSetMeta?.promptConfig

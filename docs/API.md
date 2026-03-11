@@ -179,16 +179,17 @@ Add a file to an existing job and get a presigned upload URL.
 ```json
 {
   "fileName": "pan_card.pdf",
-  "documentType": "pan_card",
-  "mimeType": "application/pdf"
+  "mimeType": "application/pdf",
+  "documentType": "pan_card"
 }
 ```
 
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `fileName` | string | Yes | Original file name |
-| `documentType` | string | Yes | Document type ID matching the RuleSet |
 | `mimeType` | string | Yes | MIME type of the file |
+| `documentType` | string | No | Document type ID matching the RuleSet. If omitted, the engine auto-classifies the document during extraction. |
+| `size` | number | No | File size in bytes |
 
 **Response (200):**
 
@@ -205,7 +206,7 @@ The presigned URL is valid for 1 hour. Upload the file with a PUT request to thi
 
 | Status | Body | Cause |
 |---|---|---|
-| 400 | `{ "error": "fileName, documentType, and mimeType required" }` | Missing required fields |
+| 400 | `{ "error": "fileName and mimeType are required" }` | Missing required fields |
 | 400 | `{ "error": "Cannot upload files to job in completed state" }` | Job is not in `created` or `uploading` state |
 | 403 | `{ "message": "Forbidden" }` | Invalid or missing API key |
 | 404 | `{ "error": "Job not found" }` | No job with that ID |
@@ -480,6 +481,38 @@ The `result` field is populated for `completed`, `failed`, and `review_required`
 | Status | Body | Cause |
 |---|---|---|
 | 404 | `{ "error": "Job not found" }` | No job with that ID |
+
+---
+
+### POST /admin/jobs
+
+Create a new verification job (admin-authenticated version of `POST /jobs`).
+
+**Auth:** Cognito JWT
+
+**Request body:** Same as `POST /jobs` (see [Job Routes](#post-jobs)).
+
+**Response:** Same as `POST /jobs`.
+
+---
+
+### POST /admin/jobs/:id/upload
+
+Upload a file to a job (admin-authenticated version of `POST /jobs/:id/files`).
+
+**Auth:** Cognito JWT
+
+**Request/Response:** Same as `POST /jobs/:id/files`.
+
+---
+
+### POST /admin/jobs/:id/process
+
+Start the processing pipeline (admin-authenticated version of `POST /jobs/:id/process`).
+
+**Auth:** Cognito JWT
+
+**Request/Response:** Same as `POST /jobs/:id/process`.
 
 ---
 

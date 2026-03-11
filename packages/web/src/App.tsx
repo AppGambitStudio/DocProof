@@ -7,7 +7,9 @@ import { RuleSetList } from "./pages/rulesets/RuleSetList";
 import { RuleSetDetail } from "./pages/rulesets/RuleSetDetail";
 import { RuleSetForm } from "./pages/rulesets/RuleSetForm";
 import { JobList } from "./pages/jobs/JobList";
+import { CreateJob } from "./pages/jobs/CreateJob";
 import { JobDetail } from "./pages/jobs/JobDetail";
+import { ApiReference } from "./pages/ApiReference";
 import { AuthProvider, useAuth } from "./lib/contexts/AuthContext";
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
@@ -47,7 +49,9 @@ export function App() {
             <Route path="/rulesets/:id" element={<RuleSetDetail />} />
             <Route path="/rulesets/:id/edit" element={<RuleSetForm />} />
             <Route path="/jobs" element={<JobList />} />
+            <Route path="/jobs/new" element={<CreateJob />} />
             <Route path="/jobs/:id" element={<JobDetail />} />
+            <Route path="/api" element={<ApiReference />} />
           </Route>
         </Routes>
       </BrowserRouter>

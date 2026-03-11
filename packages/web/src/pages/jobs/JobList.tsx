@@ -197,6 +197,16 @@ export function JobList() {
               : "Monitor document verification jobs"}
           </p>
         </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/jobs/new")}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New Job
+          </button>
         {hasProcessing && (
           <span className="inline-flex items-center gap-1.5 text-xs text-blue-600">
             <span className="relative flex h-2 w-2">
@@ -206,6 +216,7 @@ export function JobList() {
             Auto-refreshing
           </span>
         )}
+        </div>
       </div>
 
       {/* Filter tabs */}
@@ -298,6 +309,16 @@ export function JobList() {
                         activeTab === "all"
                           ? "No verification jobs have been created yet."
                           : `No jobs with status "${activeTab.replace("_", " ")}".`
+                      }
+                      action={
+                        activeTab === "all" ? (
+                          <button
+                            onClick={() => navigate("/jobs/new")}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            Create Job
+                          </button>
+                        ) : undefined
                       }
                     />
                   </td>

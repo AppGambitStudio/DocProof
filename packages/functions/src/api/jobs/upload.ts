@@ -47,15 +47,18 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
     }
     const { fileName, documentType, mimeType, size } = body;
 
-    if (!fileName || !documentType || !mimeType) {
+    if (!fileName || !mimeType) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "fileName, documentType, and mimeType required" }),
+        body: JSON.stringify({ error: "fileName and mimeType are required" }),
       };
     }
 
+    // documentType is optional — "auto" means the engine will classify the document
+    const resolvedDocType = (documentType as string) || "auto";
+
     const fileId = `file_${randomUUID().replace(/-/g, "").slice(0, 8)}`;
-    const s3Key = `jobs/${jobId}/${documentType}/${fileId}`;
+    const s3Key = `jobs/${jobId}/${resolvedDocType}/${fileId}`;
 
     // Generate presigned upload URL
     const uploadUrl = await getSignedUrl(
@@ -79,7 +82,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         ExpressionAttributeNames: { "#files": "files", "#status": "status" },
         ExpressionAttributeValues: {
           ":empty": [],
-          ":newFile": [{ fileId, fileName, documentType, s3Key, mimeType, ...(typeof size === "number" ? { size } : {}), uploadedAt: now }],
+          ":newFile": [{ fileId, fileName, documentType: resolvedDocType, s3Key, mimeType, ...(typeof size === "number" ? { size } : {}), uploadedAt: now }],
           ":status": "uploading",
           ":gsi1pk": "STATUS#uploading",
           ":now": now,

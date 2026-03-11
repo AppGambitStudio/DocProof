@@ -130,6 +130,31 @@ api.route("GET /admin/jobs/{id}", {
   auth: { jwt: { authorizer: cognitoAuthorizer.id } },
 });
 
+// Admin job creation routes (same handlers, Cognito auth instead of API Key)
+api.route("POST /admin/jobs", {
+  handler: "packages/functions/src/api/jobs/create.handler",
+  link: [storage.table, storage.bucket],
+  timeout: "30 seconds",
+}, {
+  auth: { jwt: { authorizer: cognitoAuthorizer.id } },
+});
+
+api.route("POST /admin/jobs/{id}/upload", {
+  handler: "packages/functions/src/api/jobs/upload.handler",
+  link: [storage.table, storage.bucket],
+  timeout: "60 seconds",
+}, {
+  auth: { jwt: { authorizer: cognitoAuthorizer.id } },
+});
+
+api.route("POST /admin/jobs/{id}/process", {
+  handler: "packages/functions/src/api/jobs/process.handler",
+  link: [storage.table, pipeline.orchestrator],
+  timeout: "30 seconds",
+}, {
+  auth: { jwt: { authorizer: cognitoAuthorizer.id } },
+});
+
 api.route("POST /admin/jobs/{id}/review", {
   handler: "packages/functions/src/api/admin/review.handler",
   link: [storage.table, bus],
