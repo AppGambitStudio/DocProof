@@ -16,7 +16,7 @@ export const api = new sst.aws.ApiGatewayV2("DocProofApi", {
 const cognitoAuthorizer = api.addAuthorizer({
   name: "DocProofCognitoAuthorizer",
   jwt: {
-    issuer: $interpolate`https://cognito-idp.ap-south-1.amazonaws.com/${auth.userPool.id}`,
+    issuer: $interpolate`https://cognito-idp.${aws.getRegionOutput().name}.amazonaws.com/${auth.userPool.id}`,
     audiences: [auth.userPoolClient.id],
   },
 });
