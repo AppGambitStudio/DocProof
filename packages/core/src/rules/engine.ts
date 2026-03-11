@@ -253,7 +253,9 @@ export function evaluate(input: EngineInput): JobResult {
 
     let match = false;
     if (rule.matchType === "exact") {
-      match = sourceVal.toLowerCase() === targetVal.toLowerCase();
+      const s = normalizeForComparison(sourceVal);
+      const t = normalizeForComparison(targetVal);
+      match = s === t;
     } else if (rule.matchType === "contains") {
       match = targetVal.toLowerCase().includes(sourceVal.toLowerCase());
     } else if (rule.matchType === "fuzzy") {
@@ -305,6 +307,23 @@ export function evaluate(input: EngineInput): JobResult {
 }
 
 // ─── Helpers ───
+
+/** Date-like pattern: dd/mm/yyyy, dd-mm-yyyy, yyyy-mm-dd, etc. */
+const DATE_PATTERN = /^\d{1,4}[\\/\-\.]\d{1,2}[\\/\-\.]\d{1,4}$/;
+
+/**
+ * Normalize a value for exact comparison.
+ * - Lowercases
+ * - Trims whitespace
+ * - For date-like strings, normalizes separators (/, -, .) to a single format
+ */
+function normalizeForComparison(val: string): string {
+  const trimmed = val.trim().toLowerCase();
+  if (DATE_PATTERN.test(trimmed)) {
+    return trimmed.replace(/[\\/\-\.]/g, "/");
+  }
+  return trimmed;
+}
 
 function fuzzyMatch(a: string, b: string, threshold: number): boolean {
   const s1 = a.toLowerCase();
