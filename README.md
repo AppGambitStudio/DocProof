@@ -12,6 +12,8 @@ DocProof automates document collection, extraction, and validation for onboardin
 
 > **From days to minutes.** Replace line-by-line manual document review with AI-powered extraction and rule-based validation. Humans review anomalies, not every field.
 
+![RuleSet — Document Types](docs/screenshots/1.png)
+
 ## How It Works
 
 ```
@@ -24,6 +26,9 @@ Define Rules → Submit Job (metadata + N files) → Process → Extract (N para
 4. **Rule Engine validates (1 step)** — all extracted data validated together: field-level checks (format, range, checksum), cross-document consistency (name matching, date alignment), and anomaly detection
 5. **Results returned** — per-document status, per-field validation, cross-doc checks, anomaly flags, confidence scores, token usage, and job cost in USD
 
+![Job Results — Cross-Doc Validation](docs/screenshots/5.png)
+![Job Results — Token Usage](docs/screenshots/6.png)
+
 ## Use Cases
 
 - **KYC Onboarding** — PAN + Aadhaar + address proof validation for Indian financial services
@@ -31,6 +36,13 @@ Define Rules → Submit Job (metadata + N files) → Process → Extract (N para
 - **Insurance Claims** — Policy document + claim form + supporting evidence validation
 - **HR Onboarding** — Education certificates + employment letters + identity verification
 - **Loan Processing** — Income proof + property documents + identity validation
+
+![Vendor Onboarding RuleSet](docs/screenshots/4.png)
+
+See the [`examples/`](examples/) directory for complete, ready-to-use rulesets:
+- [`kyc-india`](examples/kyc-india/) — Individual KYC with PAN, Aadhaar, and address proof
+- [`vendor-onboarding-india`](examples/vendor-onboarding-india/) — Company vendor onboarding with GST, incorporation, bank details
+- [`abc-diagnostics`](examples/abc-diagnostics/) — Healthcare diagnostics lab document verification
 
 ## Architecture
 
@@ -183,6 +195,10 @@ For heavier workloads (large document sets, complex rulesets with many semantic 
 - **Visual Rule Builder (planned)** — drag-and-drop interface — under development
 - **Claude-Powered Extraction** — LLM-native document understanding, not template-based OCR
 - **Cross-Document Validation** — verify consistency across related documents (name matching, date alignment, address correlation)
+
+![Field Rules](docs/screenshots/2.png)
+![Cross-Doc Rules](docs/screenshots/3.png)
+
 - **Anomaly Detection** — missing docs, duplicates, quality issues, suspicious patterns
 - **API-First** — integrate with any CRM, ERP, or internal system
 - **Cost Optimized** — configurable model selection per document type
