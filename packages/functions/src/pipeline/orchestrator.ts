@@ -110,6 +110,7 @@ export const handler = async (event: OrchestratorInput) => {
         new PutEventsCommand({
           Entries: [
             {
+              EventBusName: Resource.DocProofBus.name,
               Source: "docproof.jobs",
               DetailType: "job.failed",
               Detail: JSON.stringify({

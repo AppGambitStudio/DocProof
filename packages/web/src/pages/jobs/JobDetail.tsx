@@ -737,8 +737,43 @@ function TokenUsageTab({ job }: { job: JobDetailType }) {
 // Files Section
 // ---------------------------------------------------------------------------
 
+function FilePreview({ url, mimeType }: { url: string; mimeType: string }) {
+  if (mimeType === "application/pdf") {
+    return (
+      <iframe
+        src={url}
+        className="w-full h-[500px] rounded border border-gray-200"
+        title="Document preview"
+      />
+    );
+  }
+
+  if (mimeType.startsWith("image/")) {
+    return (
+      <img
+        src={url}
+        alt="Document preview"
+        className="max-w-full max-h-[500px] rounded border border-gray-200 object-contain"
+      />
+    );
+  }
+
+  return (
+    <p className="text-sm text-gray-500 py-4 text-center">
+      Preview not available for {mimeType}
+    </p>
+  );
+}
+
 function FilesSection({ job }: { job: JobDetailType }) {
+  const [previewFileId, setPreviewFileId] = useState<string | null>(null);
+
   if (job.files.length === 0) return null;
+
+  const previewFile = previewFileId
+    ? job.files.find((f) => f.fileId === previewFileId)
+    : null;
+  const previewUrl = previewFileId ? job.fileUrls?.[previewFileId] : null;
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -748,40 +783,85 @@ function FilesSection({ job }: { job: JobDetailType }) {
         </h3>
       </div>
       <ul className="divide-y divide-gray-200">
-        {job.files.map((f) => (
-          <li
-            key={f.fileId}
-            className="px-5 py-3 flex items-center justify-between"
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <svg
-                className="w-5 h-5 text-gray-400 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                />
-              </svg>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {f.fileName}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {f.documentType || "Unknown type"} &middot; {f.mimeType}
-                </p>
+        {job.files.map((f) => {
+          const hasUrl = !!job.fileUrls?.[f.fileId];
+          return (
+            <li
+              key={f.fileId}
+              className="px-5 py-3 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <svg
+                  className="w-5 h-5 text-gray-400 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                  />
+                </svg>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {f.fileName}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {f.documentType || "Unknown type"} &middot; {f.mimeType}
+                  </p>
+                </div>
               </div>
-            </div>
-            <span className="text-xs text-gray-400 flex-shrink-0">
-              {timeAgo(f.uploadedAt)}
-            </span>
-          </li>
-        ))}
+              <div className="flex items-center gap-3 flex-shrink-0">
+                {hasUrl && (
+                  <>
+                    <button
+                      onClick={() =>
+                        setPreviewFileId(
+                          previewFileId === f.fileId ? null : f.fileId
+                        )
+                      }
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      {previewFileId === f.fileId ? "Hide" : "Preview"}
+                    </button>
+                    <a
+                      href={job.fileUrls![f.fileId]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      Open
+                    </a>
+                  </>
+                )}
+                <span className="text-xs text-gray-400">
+                  {timeAgo(f.uploadedAt)}
+                </span>
+              </div>
+            </li>
+          );
+        })}
       </ul>
+
+      {/* Inline preview */}
+      {previewFile && previewUrl && (
+        <div className="border-t border-gray-200 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-gray-700">
+              {previewFile.fileName}
+            </p>
+            <button
+              onClick={() => setPreviewFileId(null)}
+              className="text-xs text-gray-500 hover:text-gray-700"
+            >
+              Close preview
+            </button>
+          </div>
+          <FilePreview url={previewUrl} mimeType={previewFile.mimeType} />
+        </div>
+      )}
     </div>
   );
 }
@@ -811,6 +891,113 @@ function DetailSkeleton() {
 // ---------------------------------------------------------------------------
 
 type ResultTab = "overview" | "documents" | "crossdoc" | "anomalies" | "tokens";
+
+function ReviewPanel({
+  jobId,
+  onReviewed,
+}: {
+  jobId: string;
+  onReviewed: () => void;
+}) {
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState<"approve" | "reject" | null>(
+    null
+  );
+  const [reviewError, setReviewError] = useState<string | null>(null);
+
+  async function handleReview(action: "approve" | "reject") {
+    try {
+      setSubmitting(action);
+      setReviewError(null);
+      await apiClient.post(`/admin/jobs/${jobId}/review`, { action, notes: notes || undefined });
+      onReviewed();
+    } catch (err) {
+      setReviewError(
+        err instanceof Error ? err.message : "Failed to submit review"
+      );
+      setSubmitting(null);
+    }
+  }
+
+  return (
+    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <svg
+          className="w-5 h-5 text-yellow-600"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+          />
+        </svg>
+        <h3 className="text-sm font-semibold text-yellow-800">
+          Review Required
+        </h3>
+      </div>
+      <p className="text-sm text-yellow-700 mb-4">
+        This job has anomalies or validation issues that require manual review.
+        Please review the results and approve or reject.
+      </p>
+
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Review Notes (optional)
+        </label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          placeholder="Add any notes about your review decision..."
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+        />
+      </div>
+
+      {reviewError && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2 mb-3">
+          {reviewError}
+        </p>
+      )}
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => handleReview("approve")}
+          disabled={submitting !== null}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+          {submitting === "approve" ? "Approving..." : "Approve"}
+        </button>
+        <button
+          onClick={() => handleReview("reject")}
+          disabled={submitting !== null}
+          className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 text-red-700 text-sm font-medium rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+          {submitting === "reject" ? "Rejecting..." : "Reject"}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function JobDetail() {
   const { id } = useParams<{ id: string }>();
@@ -1050,6 +1237,42 @@ export function JobDetail() {
           </div>
         )}
       </div>
+
+      {/* Review panel for review_required jobs */}
+      {job.status === "review_required" && (
+        <ReviewPanel jobId={job.jobId} onReviewed={fetchJob} />
+      )}
+
+      {/* Review metadata for reviewed jobs */}
+      {(job.status === ("approved" as JobStatus) ||
+        job.status === ("rejected" as JobStatus)) &&
+        job.reviewedBy && (
+          <div
+            className={`rounded-lg border p-4 ${
+              job.status === ("approved" as JobStatus)
+                ? "bg-green-50 border-green-200"
+                : "bg-red-50 border-red-200"
+            }`}
+          >
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-medium text-gray-700">
+                {job.status === ("approved" as JobStatus)
+                  ? "Approved"
+                  : "Rejected"}{" "}
+                by
+              </span>
+              <span className="font-mono text-gray-900">{job.reviewedBy}</span>
+              {job.reviewedAt && (
+                <span className="text-gray-500">
+                  on {formatDate(job.reviewedAt)}
+                </span>
+              )}
+            </div>
+            {job.reviewNotes && (
+              <p className="mt-2 text-sm text-gray-600">{job.reviewNotes}</p>
+            )}
+          </div>
+        )}
 
       {/* Result tabs */}
       {hasResult && (

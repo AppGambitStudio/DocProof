@@ -19,7 +19,7 @@ if [ $# -lt 3 ]; then
   echo ""
   echo "  user-pool-id  Cognito User Pool ID (e.g. ap-south-1_AbCdEfGhI)"
   echo "  email         Admin user email"
-  echo "  password      Permanent password (min 8 chars, upper + lower + number + special)"
+  echo "  password      Permanent password (min 8 chars, upper + lower + number)"
   exit 1
 fi
 

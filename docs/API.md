@@ -458,8 +458,13 @@ Get full job detail including result.
   "externalRef": "crm_ref_123",
   "metadata": { "applicantName": "Rahul Sharma" },
   "files": [ ... ],
+  "fileUrls": { "file_abc123": "https://s3.presigned-url..." },
   "costUsd": 0.0042,
   "result": { ... },
+  "reviewedBy": "admin@example.com",
+  "reviewedAt": "2026-03-09T11:00:00.000Z",
+  "reviewAction": "approve",
+  "reviewNotes": "Verified manually",
   "timestamps": {
     "created": "2026-03-09T09:00:00.000Z",
     "updated": "2026-03-09T10:05:00.000Z",
@@ -468,12 +473,52 @@ Get full job detail including result.
 }
 ```
 
-The `result` field is populated for `completed`, `failed`, and `review_required` jobs.
+The `result` field is populated for `completed`, `failed`, and `review_required` jobs. The `fileUrls` object maps file IDs to presigned S3 URLs (1-hour expiry) for document preview. The `reviewedBy`, `reviewedAt`, `reviewAction`, and `reviewNotes` fields are present only for reviewed jobs.
 
 **Error responses:**
 
 | Status | Body | Cause |
 |---|---|---|
+| 404 | `{ "error": "Job not found" }` | No job with that ID |
+
+---
+
+### POST /admin/jobs/:id/review
+
+Approve or reject a job that is in `review_required` state.
+
+**Path parameters:** `id` — the job ID.
+
+**Request body:**
+
+```json
+{
+  "action": "approve",
+  "notes": "Verified manually — all documents are legitimate."
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `action` | `"approve" \| "reject"` | Yes | Review decision |
+| `notes` | `string` | No | Reviewer notes |
+
+**Response (200):**
+
+```json
+{
+  "jobId": "job_a1b2c3d4e5f6",
+  "status": "approved",
+  "reviewedBy": "admin@example.com",
+  "reviewedAt": "2026-03-09T11:00:00.000Z"
+}
+```
+
+**Error responses:**
+
+| Status | Body | Cause |
+|---|---|---|
+| 400 | `{ "error": "..." }` | Invalid action, job not in review_required state |
 | 404 | `{ "error": "Job not found" }` | No job with that ID |
 
 ---

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiClient } from "../../lib/api";
 import { RuleSet } from "../../lib/types";
@@ -11,6 +11,8 @@ export function RuleSetList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadRuleSets();
@@ -26,6 +28,47 @@ export function RuleSetList() {
       setError(err instanceof Error ? err.message : "Failed to load rule sets");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setImporting(true);
+      setError(null);
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      if (!data.id || !data.name) {
+        setError("Invalid ruleset JSON: missing 'id' or 'name' field");
+        return;
+      }
+
+      await apiClient.post("/admin/rule-sets", {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        version: data.version ?? 1,
+        status: data.status ?? "draft",
+        documentTypes: data.documentTypes ?? [],
+        fieldRules: data.fieldRules ?? [],
+        crossDocRules: data.crossDocRules ?? [],
+        metadataRules: data.metadataRules ?? [],
+        promptConfig: data.promptConfig,
+      });
+
+      navigate(`/rulesets/${data.id}`);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        setError("Invalid JSON file");
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to import rule set");
+      }
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
 
@@ -53,15 +96,34 @@ export function RuleSetList() {
             Manage document verification rule sets
           </p>
         </div>
-        <button
-          onClick={() => navigate("/rulesets/new")}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          New RuleSet
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImport}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            {importing ? "Importing..." : "Import JSON"}
+          </button>
+          <button
+            onClick={() => navigate("/rulesets/new")}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New RuleSet
+          </button>
+        </div>
       </div>
 
       {/* Search */}

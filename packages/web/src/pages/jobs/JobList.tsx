@@ -67,6 +67,8 @@ const TABS: FilterTab[] = [
   { label: "Completed", value: "completed", statusParam: "completed" },
   { label: "Failed", value: "failed", statusParam: "failed" },
   { label: "Review Required", value: "review_required", statusParam: "review_required" },
+  { label: "Approved", value: "approved", statusParam: "approved" },
+  { label: "Rejected", value: "rejected", statusParam: "rejected" },
 ];
 
 // ---------------------------------------------------------------------------

@@ -14,6 +14,8 @@ const JOB_STATUSES = [
   "completed",
   "failed",
   "review_required",
+  "approved",
+  "rejected",
 ] as const;
 
 /**
@@ -29,7 +31,7 @@ export const handler: APIGatewayProxyHandlerV2 = async () => {
     // Query job counts by status using GSI (parallel)
     const results = await Promise.all(
       JOB_STATUSES.map(async (status) => {
-        const fetchItems = status === "completed" || status === "failed" || status === "review_required";
+        const fetchItems = ["completed", "failed", "review_required", "approved", "rejected"].includes(status);
         const { Count = 0, Items = [] } = await ddb.send(
           new QueryCommand({
             TableName: Resource.DocProofTable.name,
@@ -48,7 +50,7 @@ export const handler: APIGatewayProxyHandlerV2 = async () => {
       statusCounts[status] = count;
 
       // Accumulate cost from terminal states (all incur Bedrock costs)
-      if (status === "completed" || status === "failed" || status === "review_required") {
+      if (["completed", "failed", "review_required", "approved", "rejected"].includes(status)) {
         for (const item of items) {
           totalCost += (item.costUsd as number) ?? 0;
         }

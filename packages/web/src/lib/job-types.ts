@@ -4,11 +4,14 @@
 export type JobStatus =
   | "created"
   | "uploading"
+  | "processing"
   | "extracting"
   | "validating"
   | "completed"
   | "failed"
-  | "review_required";
+  | "review_required"
+  | "approved"
+  | "rejected";
 
 export interface JobSummary {
   jobId: string;
@@ -121,8 +124,13 @@ export interface JobDetail {
   externalRef?: string;
   metadata: Record<string, unknown>;
   files: JobFile[];
+  fileUrls?: Record<string, string>;
   costUsd?: number;
   result?: JobResultDetail;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewAction?: "approve" | "reject";
+  reviewNotes?: string;
   timestamps: {
     created: string;
     updated: string;

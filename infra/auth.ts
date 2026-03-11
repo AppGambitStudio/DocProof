@@ -33,6 +33,7 @@ const userPoolClient = userPool.addClient("DocProofWebClient", {
     client: {
       explicitAuthFlows: [
         "ALLOW_USER_SRP_AUTH",
+        "ALLOW_ADMIN_USER_PASSWORD_AUTH",
         "ALLOW_REFRESH_TOKEN_AUTH",
       ],
       accessTokenValidity: 1, // 1 hour

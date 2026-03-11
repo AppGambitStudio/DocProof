@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { apiClient } from "../../lib/api";
-import { DocumentTypeConfig, FieldDefinition, RuleSet } from "../../lib/types";
+import {
+  CrossDocRule,
+  DocumentTypeConfig,
+  FieldDefinition,
+  FieldRule,
+  FieldValidation,
+  MetadataRule,
+  PromptConfig,
+  RuleSet,
+} from "../../lib/types";
 
 interface FormData {
   id: string;
@@ -10,6 +19,10 @@ interface FormData {
   version: number;
   status: "draft" | "active" | "archived";
   documentTypes: DocumentTypeConfig[];
+  fieldRules: FieldRule[];
+  crossDocRules: CrossDocRule[];
+  metadataRules: MetadataRule[];
+  promptConfig: PromptConfig;
 }
 
 const emptyDocType: DocumentTypeConfig = {
@@ -28,6 +41,45 @@ const emptyField: FieldDefinition = {
   type: "string",
 };
 
+const emptyFieldValidation: FieldValidation = {
+  type: "required",
+  value: undefined,
+  message: "",
+};
+
+const emptyFieldRule: FieldRule = {
+  documentType: "",
+  field: "",
+  validations: [],
+};
+
+const emptyCrossDocRule: CrossDocRule = {
+  id: "",
+  description: "",
+  sourceDocType: "",
+  sourceField: "",
+  targetDocType: "",
+  targetField: "",
+  matchType: "exact",
+};
+
+const emptyMetadataRule: MetadataRule = {
+  field: "",
+  validations: [],
+};
+
+const validationTypes = [
+  "required",
+  "regex",
+  "min_length",
+  "max_length",
+  "enum",
+  "checksum",
+  "date_format",
+  "min",
+  "max",
+];
+
 export function RuleSetForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -40,6 +92,10 @@ export function RuleSetForm() {
     version: 1,
     status: "draft",
     documentTypes: [],
+    fieldRules: [],
+    crossDocRules: [],
+    metadataRules: [],
+    promptConfig: {},
   });
 
   const [loading, setLoading] = useState(isEdit);
@@ -63,6 +119,10 @@ export function RuleSetForm() {
         version: data.version,
         status: data.status,
         documentTypes: data.documentTypes || [],
+        fieldRules: data.fieldRules || [],
+        crossDocRules: data.crossDocRules || [],
+        metadataRules: data.metadataRules || [],
+        promptConfig: data.promptConfig || {},
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load rule set");
@@ -94,9 +154,13 @@ export function RuleSetForm() {
         version: form.version,
         status: form.status,
         documentTypes: form.documentTypes,
-        fieldRules: [],
-        crossDocRules: [],
-        metadataRules: [],
+        fieldRules: form.fieldRules,
+        crossDocRules: form.crossDocRules,
+        metadataRules: form.metadataRules,
+        promptConfig:
+          form.promptConfig.role || form.promptConfig.orgContext || (form.promptConfig.contextFields && form.promptConfig.contextFields.length > 0)
+            ? form.promptConfig
+            : undefined,
       };
 
       if (isEdit) {
@@ -164,6 +228,140 @@ export function RuleSetForm() {
         i === fieldIndex ? { ...f, ...updates } : f
       ),
     });
+  }
+
+  // --- Field Rules helpers ---
+  function addFieldRule() {
+    setForm((prev) => ({
+      ...prev,
+      fieldRules: [...prev.fieldRules, { ...emptyFieldRule, validations: [] }],
+    }));
+  }
+
+  function removeFieldRule(index: number) {
+    setForm((prev) => ({
+      ...prev,
+      fieldRules: prev.fieldRules.filter((_, i) => i !== index),
+    }));
+  }
+
+  function updateFieldRule(index: number, updates: Partial<FieldRule>) {
+    setForm((prev) => ({
+      ...prev,
+      fieldRules: prev.fieldRules.map((r, i) =>
+        i === index ? { ...r, ...updates } : r
+      ),
+    }));
+  }
+
+  function addValidationToFieldRule(ruleIndex: number) {
+    const rule = form.fieldRules[ruleIndex];
+    updateFieldRule(ruleIndex, {
+      validations: [...rule.validations, { ...emptyFieldValidation }],
+    });
+  }
+
+  function removeValidationFromFieldRule(ruleIndex: number, valIndex: number) {
+    const rule = form.fieldRules[ruleIndex];
+    updateFieldRule(ruleIndex, {
+      validations: rule.validations.filter((_, i) => i !== valIndex),
+    });
+  }
+
+  function updateValidationInFieldRule(
+    ruleIndex: number,
+    valIndex: number,
+    updates: Partial<FieldValidation>
+  ) {
+    const rule = form.fieldRules[ruleIndex];
+    updateFieldRule(ruleIndex, {
+      validations: rule.validations.map((v, i) =>
+        i === valIndex ? { ...v, ...updates } : v
+      ),
+    });
+  }
+
+  // --- Cross-Doc Rules helpers ---
+  function addCrossDocRule() {
+    setForm((prev) => ({
+      ...prev,
+      crossDocRules: [...prev.crossDocRules, { ...emptyCrossDocRule }],
+    }));
+  }
+
+  function removeCrossDocRule(index: number) {
+    setForm((prev) => ({
+      ...prev,
+      crossDocRules: prev.crossDocRules.filter((_, i) => i !== index),
+    }));
+  }
+
+  function updateCrossDocRule(index: number, updates: Partial<CrossDocRule>) {
+    setForm((prev) => ({
+      ...prev,
+      crossDocRules: prev.crossDocRules.map((r, i) =>
+        i === index ? { ...r, ...updates } : r
+      ),
+    }));
+  }
+
+  // --- Metadata Rules helpers ---
+  function addMetadataRule() {
+    setForm((prev) => ({
+      ...prev,
+      metadataRules: [...prev.metadataRules, { ...emptyMetadataRule, validations: [] }],
+    }));
+  }
+
+  function removeMetadataRule(index: number) {
+    setForm((prev) => ({
+      ...prev,
+      metadataRules: prev.metadataRules.filter((_, i) => i !== index),
+    }));
+  }
+
+  function updateMetadataRule(index: number, updates: Partial<MetadataRule>) {
+    setForm((prev) => ({
+      ...prev,
+      metadataRules: prev.metadataRules.map((r, i) =>
+        i === index ? { ...r, ...updates } : r
+      ),
+    }));
+  }
+
+  function addValidationToMetadataRule(ruleIndex: number) {
+    const rule = form.metadataRules[ruleIndex];
+    updateMetadataRule(ruleIndex, {
+      validations: [...rule.validations, { ...emptyFieldValidation }],
+    });
+  }
+
+  function removeValidationFromMetadataRule(ruleIndex: number, valIndex: number) {
+    const rule = form.metadataRules[ruleIndex];
+    updateMetadataRule(ruleIndex, {
+      validations: rule.validations.filter((_, i) => i !== valIndex),
+    });
+  }
+
+  function updateValidationInMetadataRule(
+    ruleIndex: number,
+    valIndex: number,
+    updates: Partial<FieldValidation>
+  ) {
+    const rule = form.metadataRules[ruleIndex];
+    updateMetadataRule(ruleIndex, {
+      validations: rule.validations.map((v, i) =>
+        i === valIndex ? { ...v, ...updates } : v
+      ),
+    });
+  }
+
+  // --- Prompt Config helper ---
+  function updatePromptConfig(updates: Partial<PromptConfig>) {
+    setForm((prev) => ({
+      ...prev,
+      promptConfig: { ...prev.promptConfig, ...updates },
+    }));
   }
 
   if (loading) {
@@ -493,6 +691,607 @@ export function RuleSetForm() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Field Rules */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-gray-900">
+              Field Rules
+              <span className="ml-2 text-sm font-normal text-gray-500">
+                ({form.fieldRules.length})
+              </span>
+            </h2>
+            <button
+              type="button"
+              onClick={addFieldRule}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Add Field Rule
+            </button>
+          </div>
+
+          {form.fieldRules.length === 0 && (
+            <p className="text-sm text-gray-500 py-4 text-center">
+              No field rules added yet. Click "Add Field Rule" to get started.
+            </p>
+          )}
+
+          <div className="space-y-4">
+            {form.fieldRules.map((rule, rIndex) => (
+              <div
+                key={rIndex}
+                className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-gray-700">
+                    Field Rule #{rIndex + 1}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => removeFieldRule(rIndex)}
+                    className="text-red-500 hover:text-red-700 transition-colors"
+                    title="Remove field rule"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Document Type
+                    </label>
+                    <input
+                      type="text"
+                      value={rule.documentType}
+                      onChange={(e) =>
+                        updateFieldRule(rIndex, { documentType: e.target.value })
+                      }
+                      placeholder="e.g., pan_card"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Field
+                    </label>
+                    <input
+                      type="text"
+                      value={rule.field}
+                      onChange={(e) =>
+                        updateFieldRule(rIndex, { field: e.target.value })
+                      }
+                      placeholder="e.g., pan_number"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Validations */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-medium text-gray-600">Validations</label>
+                    <button
+                      type="button"
+                      onClick={() => addValidationToFieldRule(rIndex)}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      + Add Validation
+                    </button>
+                  </div>
+
+                  {rule.validations.length === 0 && (
+                    <p className="text-xs text-gray-400 py-2">No validations added</p>
+                  )}
+
+                  {rule.validations.map((val, vIndex) => (
+                    <div
+                      key={vIndex}
+                      className="flex items-center gap-2 mb-2"
+                    >
+                      <select
+                        value={val.type}
+                        onChange={(e) =>
+                          updateValidationInFieldRule(rIndex, vIndex, {
+                            type: e.target.value,
+                            value: e.target.value === "required" ? undefined : val.value,
+                          })
+                        }
+                        className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none bg-white"
+                      >
+                        {validationTypes.map((vt) => (
+                          <option key={vt} value={vt}>
+                            {vt}
+                          </option>
+                        ))}
+                      </select>
+                      {val.type !== "required" && (
+                        <input
+                          type="text"
+                          value={val.value !== undefined && val.value !== null ? String(val.value) : ""}
+                          onChange={(e) =>
+                            updateValidationInFieldRule(rIndex, vIndex, {
+                              value: e.target.value,
+                            })
+                          }
+                          placeholder="Value"
+                          className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                        />
+                      )}
+                      <input
+                        type="text"
+                        value={val.message || ""}
+                        onChange={(e) =>
+                          updateValidationInFieldRule(rIndex, vIndex, {
+                            message: e.target.value,
+                          })
+                        }
+                        placeholder="Error message"
+                        className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeValidationFromFieldRule(rIndex, vIndex)}
+                        className="text-red-400 hover:text-red-600 transition-colors"
+                      >
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Cross-Doc Rules */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-gray-900">
+              Cross-Doc Rules
+              <span className="ml-2 text-sm font-normal text-gray-500">
+                ({form.crossDocRules.length})
+              </span>
+            </h2>
+            <button
+              type="button"
+              onClick={addCrossDocRule}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Add Cross-Doc Rule
+            </button>
+          </div>
+
+          {form.crossDocRules.length === 0 && (
+            <p className="text-sm text-gray-500 py-4 text-center">
+              No cross-doc rules added yet. Click "Add Cross-Doc Rule" to get started.
+            </p>
+          )}
+
+          <div className="space-y-4">
+            {form.crossDocRules.map((rule, rIndex) => (
+              <div
+                key={rIndex}
+                className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-gray-700">
+                    Cross-Doc Rule #{rIndex + 1}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => removeCrossDocRule(rIndex)}
+                    className="text-red-500 hover:text-red-700 transition-colors"
+                    title="Remove cross-doc rule"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Rule ID
+                    </label>
+                    <input
+                      type="text"
+                      value={rule.id}
+                      onChange={(e) =>
+                        updateCrossDocRule(rIndex, { id: e.target.value })
+                      }
+                      placeholder="e.g., name_match_pan_aadhaar"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Description
+                    </label>
+                    <input
+                      type="text"
+                      value={rule.description}
+                      onChange={(e) =>
+                        updateCrossDocRule(rIndex, { description: e.target.value })
+                      }
+                      placeholder="e.g., Name must match across documents"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Source Doc Type
+                    </label>
+                    <input
+                      type="text"
+                      value={rule.sourceDocType}
+                      onChange={(e) =>
+                        updateCrossDocRule(rIndex, { sourceDocType: e.target.value })
+                      }
+                      placeholder="e.g., pan_card"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Source Field
+                    </label>
+                    <input
+                      type="text"
+                      value={rule.sourceField}
+                      onChange={(e) =>
+                        updateCrossDocRule(rIndex, { sourceField: e.target.value })
+                      }
+                      placeholder="e.g., full_name"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Target Doc Type
+                    </label>
+                    <input
+                      type="text"
+                      value={rule.targetDocType}
+                      onChange={(e) =>
+                        updateCrossDocRule(rIndex, { targetDocType: e.target.value })
+                      }
+                      placeholder="e.g., aadhaar_card"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Target Field
+                    </label>
+                    <input
+                      type="text"
+                      value={rule.targetField}
+                      onChange={(e) =>
+                        updateCrossDocRule(rIndex, { targetField: e.target.value })
+                      }
+                      placeholder="e.g., full_name"
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Match Type
+                    </label>
+                    <select
+                      value={rule.matchType}
+                      onChange={(e) =>
+                        updateCrossDocRule(rIndex, {
+                          matchType: e.target.value as CrossDocRule["matchType"],
+                          threshold: e.target.value === "fuzzy" ? rule.threshold ?? 0.8 : undefined,
+                        })
+                      }
+                      className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                    >
+                      <option value="exact">exact</option>
+                      <option value="fuzzy">fuzzy</option>
+                      <option value="contains">contains</option>
+                      <option value="date_range">date_range</option>
+                    </select>
+                  </div>
+                  {rule.matchType === "fuzzy" && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Threshold (0-1)
+                      </label>
+                      <input
+                        type="number"
+                        value={rule.threshold ?? 0.8}
+                        onChange={(e) =>
+                          updateCrossDocRule(rIndex, {
+                            threshold: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Metadata Rules */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-gray-900">
+              Metadata Rules
+              <span className="ml-2 text-sm font-normal text-gray-500">
+                ({form.metadataRules.length})
+              </span>
+            </h2>
+            <button
+              type="button"
+              onClick={addMetadataRule}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Add Metadata Rule
+            </button>
+          </div>
+
+          {form.metadataRules.length === 0 && (
+            <p className="text-sm text-gray-500 py-4 text-center">
+              No metadata rules added yet. Click "Add Metadata Rule" to get started.
+            </p>
+          )}
+
+          <div className="space-y-4">
+            {form.metadataRules.map((rule, rIndex) => (
+              <div
+                key={rIndex}
+                className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-medium text-gray-700">
+                    Metadata Rule #{rIndex + 1}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => removeMetadataRule(rIndex)}
+                    className="text-red-500 hover:text-red-700 transition-colors"
+                    title="Remove metadata rule"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Field Name
+                  </label>
+                  <input
+                    type="text"
+                    value={rule.field}
+                    onChange={(e) =>
+                      updateMetadataRule(rIndex, { field: e.target.value })
+                    }
+                    placeholder="e.g., applicant_name"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+
+                {/* Validations */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-medium text-gray-600">Validations</label>
+                    <button
+                      type="button"
+                      onClick={() => addValidationToMetadataRule(rIndex)}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      + Add Validation
+                    </button>
+                  </div>
+
+                  {rule.validations.length === 0 && (
+                    <p className="text-xs text-gray-400 py-2">No validations added</p>
+                  )}
+
+                  {rule.validations.map((val, vIndex) => (
+                    <div
+                      key={vIndex}
+                      className="flex items-center gap-2 mb-2"
+                    >
+                      <select
+                        value={val.type}
+                        onChange={(e) =>
+                          updateValidationInMetadataRule(rIndex, vIndex, {
+                            type: e.target.value,
+                            value: e.target.value === "required" ? undefined : val.value,
+                          })
+                        }
+                        className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none bg-white"
+                      >
+                        {validationTypes.map((vt) => (
+                          <option key={vt} value={vt}>
+                            {vt}
+                          </option>
+                        ))}
+                      </select>
+                      {val.type !== "required" && (
+                        <input
+                          type="text"
+                          value={val.value !== undefined && val.value !== null ? String(val.value) : ""}
+                          onChange={(e) =>
+                            updateValidationInMetadataRule(rIndex, vIndex, {
+                              value: e.target.value,
+                            })
+                          }
+                          placeholder="Value"
+                          className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                        />
+                      )}
+                      <input
+                        type="text"
+                        value={val.message || ""}
+                        onChange={(e) =>
+                          updateValidationInMetadataRule(rIndex, vIndex, {
+                            message: e.target.value,
+                          })
+                        }
+                        placeholder="Error message"
+                        className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeValidationFromMetadataRule(rIndex, vIndex)}
+                        className="text-red-400 hover:text-red-600 transition-colors"
+                      >
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Prompt Config */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">Prompt Config</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
+              <input
+                type="text"
+                value={form.promptConfig.role || ""}
+                onChange={(e) =>
+                  updatePromptConfig({ role: e.target.value || undefined })
+                }
+                placeholder="e.g., You are a document verification specialist for a healthcare company."
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Organization Context
+              </label>
+              <textarea
+                value={form.promptConfig.orgContext || ""}
+                onChange={(e) =>
+                  updatePromptConfig({ orgContext: e.target.value || undefined })
+                }
+                rows={3}
+                placeholder="Describe your organization context for AI extraction..."
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Context Fields (comma-separated)
+              </label>
+              <input
+                type="text"
+                value={form.promptConfig.contextFields?.join(", ") || ""}
+                onChange={(e) =>
+                  updatePromptConfig({
+                    contextFields: e.target.value
+                      ? e.target.value
+                          .split(",")
+                          .map((s) => s.trim())
+                          .filter(Boolean)
+                      : undefined,
+                  })
+                }
+                placeholder="e.g., applicant_name, application_date, branch_code"
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              />
+            </div>
           </div>
         </div>
 

@@ -45,6 +45,7 @@ export const handler = async (event: NotifyInput) => {
     new PutEventsCommand({
       Entries: [
         {
+          EventBusName: Resource.DocProofBus.name,
           Source: "docproof.jobs",
           DetailType: detailType,
           Detail: JSON.stringify({

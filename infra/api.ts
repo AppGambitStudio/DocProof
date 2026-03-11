@@ -1,6 +1,7 @@
 import { storage } from "./storage";
 import { auth } from "./auth";
 import { pipeline } from "./jobs";
+import { bus } from "./events";
 
 export const api = new sst.aws.ApiGatewayV2("DocProofApi", {
   cors: {
@@ -125,6 +126,17 @@ api.route("GET /admin/jobs", {
 api.route("GET /admin/jobs/{id}", {
   handler: "packages/functions/src/api/admin/jobs.handler",
   link: [storage.table, storage.bucket],
+}, {
+  auth: { jwt: { authorizer: cognitoAuthorizer.id } },
+});
+
+api.route("POST /admin/jobs/{id}/review", {
+  handler: "packages/functions/src/api/admin/review.handler",
+  link: [storage.table, bus],
+  timeout: "15 seconds",
+  permissions: [
+    { actions: ["events:PutEvents"], resources: ["*"] },
+  ],
 }, {
   auth: { jwt: { authorizer: cognitoAuthorizer.id } },
 });

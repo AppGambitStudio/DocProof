@@ -5,9 +5,12 @@ import {
   GetCommand,
   QueryCommand,
 } from "@aws-sdk/lib-dynamodb";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { APIGatewayProxyHandlerV2 } from "aws-lambda";
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const s3 = new S3Client({});
 
 /**
  * Admin-facing job endpoints (Cognito JWT auth).
@@ -49,9 +52,7 @@ async function getJobDetail(jobId: string) {
   // Get result if completed
   let result = null;
   if (
-    job.status === "completed" ||
-    job.status === "review_required" ||
-    job.status === "failed"
+    ["completed", "review_required", "failed", "approved", "rejected"].includes(job.status as string)
   ) {
     const { Item: resultItem } = await ddb.send(
       new GetCommand({
@@ -61,6 +62,28 @@ async function getJobDetail(jobId: string) {
     );
     result = resultItem?.result ?? null;
   }
+
+  // Generate presigned read URLs for uploaded files
+  const files = (job.files ?? []) as { fileId: string; s3Key: string; [k: string]: unknown }[];
+  const fileUrls: Record<string, string> = {};
+  await Promise.all(
+    files.map(async (f) => {
+      if (f.s3Key) {
+        try {
+          fileUrls[f.fileId] = await getSignedUrl(
+            s3,
+            new GetObjectCommand({
+              Bucket: Resource.DocProofBucket.name,
+              Key: f.s3Key,
+            }),
+            { expiresIn: 3600 }
+          );
+        } catch {
+          // skip files that can't be signed
+        }
+      }
+    })
+  );
 
   return {
     statusCode: 200,
@@ -73,8 +96,13 @@ async function getJobDetail(jobId: string) {
       externalRef: job.externalRef,
       metadata: job.metadata,
       files: job.files,
+      fileUrls,
       costUsd: job.costUsd,
       result,
+      reviewedBy: job.reviewedBy,
+      reviewedAt: job.reviewedAt,
+      reviewAction: job.reviewAction,
+      reviewNotes: job.reviewNotes,
       timestamps: {
         created: job.createdAt,
         updated: job.updatedAt,
@@ -129,6 +157,7 @@ async function listJobs(params: Record<string, string | undefined>) {
   const ALL_STATUSES = [
     "created", "uploading", "processing", "extracting",
     "validating", "completed", "failed", "review_required",
+    "approved", "rejected",
   ];
 
   const allResults = await Promise.all(

@@ -128,6 +128,43 @@ export function RuleSetDetail() {
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => {
+                const exportData = {
+                  id: ruleSet.id,
+                  name: ruleSet.name,
+                  description: ruleSet.description,
+                  version: ruleSet.version,
+                  status: ruleSet.status,
+                  documentTypes: ruleSet.documentTypes,
+                  fieldRules: ruleSet.fieldRules,
+                  crossDocRules: ruleSet.crossDocRules,
+                  metadataRules: ruleSet.metadataRules,
+                  promptConfig: ruleSet.promptConfig,
+                };
+                const blob = new Blob(
+                  [JSON.stringify(exportData, null, 2)],
+                  { type: "application/json" }
+                );
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${ruleSet.id}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              Export JSON
+            </button>
+            <button
               onClick={() => navigate(`/rulesets/${id}/edit`)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
             >

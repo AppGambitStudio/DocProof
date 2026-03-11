@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { bus } from "./events";
 
 /**
  * Single Lambda orchestrator for the document processing pipeline.
@@ -10,7 +11,7 @@ import { storage } from "./storage";
  */
 const orchestrator = new sst.aws.Function("PipelineOrchestrator", {
   handler: "packages/functions/src/pipeline/orchestrator.handler",
-  link: [storage.table, storage.bucket],
+  link: [storage.table, storage.bucket, bus],
   timeout: "15 minutes",
   memory: "512 MB",
   permissions: [

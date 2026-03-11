@@ -13,6 +13,8 @@ bus.subscribe("DocProofWebhook", {
       "job.completed",
       "job.failed",
       "job.review_required",
+      "job.approved",
+      "job.rejected",
     ],
   },
 });

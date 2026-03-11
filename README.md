@@ -115,10 +115,20 @@ aws cognito-idp admin-initiate-auth \
 
 Use the `IdToken` from the response as `Authorization: Bearer <token>` on admin endpoints.
 
+### Seed Example Rulesets
+
+Load the bundled example rulesets (KYC India, Vendor Onboarding, ABC Diagnostics) into the API:
+
+```bash
+./scripts/seed-rulesets.sh <api-url> <user-pool-id> <client-id> admin@example.com YourSecurePass123!
+```
+
+All values are printed in `sst dev` or `sst deploy` output. You can also import rulesets via the admin UI's "Import JSON" button.
+
 ### Create Your First Job
 
 ```bash
-# 1. Create a ruleset (or use the KYC India example)
+# 1. Create a ruleset (or seed the examples above)
 # Note: <your-api-url> is provided by `sst dev` output
 curl -X POST <your-api-url>/admin/rule-sets \
   -H "Content-Type: application/json" \
