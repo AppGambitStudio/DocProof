@@ -613,6 +613,30 @@ export function RuleSetForm() {
                   />
                 </div>
 
+                {/* Satisfies Types */}
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Satisfies Types (comma-separated typeIds)
+                  </label>
+                  <input
+                    type="text"
+                    value={dt.satisfiesTypes?.join(", ") || ""}
+                    onChange={(e) =>
+                      updateDocType(dtIndex, {
+                        satisfiesTypes: e.target.value
+                          .split(",")
+                          .map((s) => s.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                    placeholder="e.g., address_proof, identity_proof"
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Other document types this can satisfy (e.g., aadhaar_card satisfies address_proof)
+                  </p>
+                </div>
+
                 {/* Expected Fields */}
                 <div>
                   <div className="flex items-center justify-between mb-2">

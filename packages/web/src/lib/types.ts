@@ -26,6 +26,7 @@ export interface DocumentTypeConfig {
   flagConditions?: string[];
   applicableTo?: string[];
   category?: string;
+  satisfiesTypes?: string[];
 }
 
 // Validation type — flat representation of the core discriminated union.

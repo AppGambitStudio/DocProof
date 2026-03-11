@@ -48,6 +48,8 @@ export interface DocumentTypeConfig {
   applicableTo?: string[];
   /** Category grouping for prompt organization */
   category?: string;
+  /** Other document typeIds that this document can satisfy (e.g., aadhaar_card satisfies address_proof) */
+  satisfiesTypes?: string[];
 }
 
 // ─── Prompt Configuration ───

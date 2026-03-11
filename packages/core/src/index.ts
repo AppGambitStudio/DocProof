@@ -34,7 +34,7 @@ export {
 } from "./rules/types";
 
 // Rule Engine
-export { evaluate } from "./rules/engine";
+export { evaluate, findAnalysisByType, buildSatisfiedByMap } from "./rules/engine";
 export { runValidation, runAllValidations } from "./rules/validators";
 
 // Extraction

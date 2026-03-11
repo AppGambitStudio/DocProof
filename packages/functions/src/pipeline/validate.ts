@@ -1,7 +1,7 @@
 import { Resource } from "sst";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
-import { evaluate, semanticMatch } from "@docproof/core";
+import { evaluate, semanticMatch, findAnalysisByType, buildSatisfiedByMap } from "@docproof/core";
 import type {
   RuleSet,
   ExtractionResult,
@@ -73,13 +73,11 @@ export const handler = async (event: ValidateInput) => {
     }
   }
 
+  const satisfiedByMap = buildSatisfiedByMap(ruleSet);
+
   for (const rule of semanticRules) {
-    const sourceAnalysis = allAnalyses.find(
-      (a) => a.analysis.documentType === rule.sourceDoc
-    )?.analysis;
-    const targetAnalysis = allAnalyses.find(
-      (a) => a.analysis.documentType === rule.targetDoc
-    )?.analysis;
+    const sourceAnalysis = findAnalysisByType(allAnalyses, rule.sourceDoc, satisfiedByMap);
+    const targetAnalysis = findAnalysisByType(allAnalyses, rule.targetDoc, satisfiedByMap);
 
     if (!sourceAnalysis || !targetAnalysis) continue;
 

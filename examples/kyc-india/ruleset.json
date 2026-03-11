@@ -27,6 +27,7 @@
       "required": true,
       "maxCount": 1,
       "acceptedFormats": ["pdf", "jpg", "png"],
+      "satisfiesTypes": ["address_proof"],
       "extractionPrompt": "This is an Indian Aadhaar card issued by UIDAI. Extract the Aadhaar number, full name, date of birth, gender, and address.",
       "expectedFields": [
         { "name": "aadhaar_number", "label": "Aadhaar Number", "type": "string", "description": "12-digit number, may have spaces" },

@@ -313,6 +313,22 @@ function DocumentTypesTab({ ruleSet }: { ruleSet: RuleSet }) {
             </div>
           </div>
 
+          {dt.satisfiesTypes && dt.satisfiesTypes.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <span className="text-xs text-gray-500">Satisfies types: </span>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {dt.satisfiesTypes.map((tid) => (
+                  <span
+                    key={tid}
+                    className="px-2 py-0.5 text-xs bg-green-50 text-green-700 rounded"
+                  >
+                    {tid}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {dt.applicableTo && dt.applicableTo.length > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-100">
               <span className="text-xs text-gray-500">Applicable to: </span>

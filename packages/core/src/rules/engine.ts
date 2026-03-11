@@ -10,6 +10,48 @@ import type {
 } from "./types";
 import { runAllValidations } from "./validators";
 
+/**
+ * Build a reverse map: for each typeId, which other typeIds can satisfy it
+ * via the `satisfiesTypes` declaration on DocumentTypeConfig.
+ */
+export function buildSatisfiedByMap(ruleSet: RuleSet): Map<string, string[]> {
+  const satisfiedBy = new Map<string, string[]>();
+  for (const dt of ruleSet.documentTypes) {
+    for (const satisfiedType of dt.satisfiesTypes ?? []) {
+      const list = satisfiedBy.get(satisfiedType) ?? [];
+      list.push(dt.typeId);
+      satisfiedBy.set(satisfiedType, list);
+    }
+  }
+  return satisfiedBy;
+}
+
+/**
+ * Find an analysis matching a document type, falling back to types that
+ * satisfy it (e.g., aadhaar_card satisfies address_proof).
+ */
+export function findAnalysisByType(
+  allAnalyses: { fileId: string; analysis: DocumentAnalysis }[],
+  targetType: string,
+  satisfiedBy: Map<string, string[]>
+): DocumentAnalysis | undefined {
+  // Direct match first
+  const direct = allAnalyses.find(
+    (a) => a.analysis.documentType === targetType
+  )?.analysis;
+  if (direct) return direct;
+
+  // Fall back to satisfying types
+  const satisfiers = satisfiedBy.get(targetType) ?? [];
+  for (const satisfierType of satisfiers) {
+    const fallback = allAnalyses.find(
+      (a) => a.analysis.documentType === satisfierType
+    )?.analysis;
+    if (fallback) return fallback;
+  }
+  return undefined;
+}
+
 interface EngineInput {
   jobId: string;
   ruleSet: RuleSet;
@@ -98,22 +140,32 @@ function detectAnomalies(
     docTypeCounts.set(analysis.documentType, list);
   }
 
+  const satisfiedBy = buildSatisfiedByMap(ruleSet);
+
   // Check for missing required documents
   for (const dt of ruleSet.documentTypes) {
-    const count = docTypeCounts.get(dt.typeId)?.length ?? 0;
-    if (dt.required && count === 0) {
-      anomalies.push({
-        type: "missing_doc",
-        severity: "high",
-        message: `Required document "${dt.label}" is missing`,
-        relatedDocuments: [],
-      });
+    const directCount = docTypeCounts.get(dt.typeId)?.length ?? 0;
+    if (dt.required && directCount === 0) {
+      // Check if another document type satisfies this requirement
+      const satisfiers = satisfiedBy.get(dt.typeId) ?? [];
+      const satisfiedCount = satisfiers.reduce(
+        (sum, tid) => sum + (docTypeCounts.get(tid)?.length ?? 0),
+        0
+      );
+      if (satisfiedCount === 0) {
+        anomalies.push({
+          type: "missing_doc",
+          severity: "high",
+          message: `Required document "${dt.label}" is missing`,
+          relatedDocuments: [],
+        });
+      }
     }
-    if (count > dt.maxCount) {
+    if (directCount > dt.maxCount) {
       anomalies.push({
         type: "duplicate_doc",
         severity: "medium",
-        message: `Too many "${dt.label}" documents: ${count} found, max ${dt.maxCount}`,
+        message: `Too many "${dt.label}" documents: ${directCount} found, max ${dt.maxCount}`,
         relatedDocuments: docTypeCounts.get(dt.typeId) ?? [],
       });
     }
@@ -182,16 +234,13 @@ export function evaluate(input: EngineInput): JobResult {
   const anomalies = detectAnomalies(ruleSet, allAnalyses);
 
   // Cross-doc rules — deterministic only (exact, contains, fuzzy)
+  const satisfiedByMap = buildSatisfiedByMap(ruleSet);
   const crossDocResults: CrossDocValidationResult[] = [];
   for (const rule of ruleSet.crossDocRules) {
     if (rule.matchType === "semantic") continue; // handled by LLM step
 
-    const sourceAnalysis = allAnalyses.find(
-      (a) => a.analysis.documentType === rule.sourceDoc
-    )?.analysis;
-    const targetAnalysis = allAnalyses.find(
-      (a) => a.analysis.documentType === rule.targetDoc
-    )?.analysis;
+    const sourceAnalysis = findAnalysisByType(allAnalyses, rule.sourceDoc, satisfiedByMap);
+    const targetAnalysis = findAnalysisByType(allAnalyses, rule.targetDoc, satisfiedByMap);
 
     if (!sourceAnalysis || !targetAnalysis) continue;
 
