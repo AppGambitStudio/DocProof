@@ -7,7 +7,7 @@ import {
 } from "@aws-sdk/client-eventbridge";
 import type { APIGatewayProxyHandlerV2 } from "aws-lambda";
 
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } });
 const eventBridge = new EventBridgeClient({});
 
 /**

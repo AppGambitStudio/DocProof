@@ -6,7 +6,7 @@ import {
   PutEventsCommand,
 } from "@aws-sdk/client-eventbridge";
 
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } });
 const eventBridge = new EventBridgeClient({});
 
 interface NotifyInput {

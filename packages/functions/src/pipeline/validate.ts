@@ -10,7 +10,7 @@ import type {
   DocumentAnalysis,
 } from "@docproof/core";
 
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } });
 
 interface ValidateInput {
   jobId: string;

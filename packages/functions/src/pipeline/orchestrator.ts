@@ -11,7 +11,7 @@ import { handler as validate } from "./validate";
 import { handler as compile } from "./compile";
 import { handler as notify } from "./notify";
 
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } });
 const eventBridge = new EventBridgeClient({});
 
 interface OrchestratorInput {

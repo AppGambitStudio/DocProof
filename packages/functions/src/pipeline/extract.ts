@@ -6,7 +6,7 @@ import { extractDocument } from "@docproof/core";
 import type { ExtractionResult, DocumentTypeConfig, RuleSet } from "@docproof/core";
 
 const s3 = new S3Client({});
-const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } });
 
 interface ExtractStepInput {
   jobId: string;
