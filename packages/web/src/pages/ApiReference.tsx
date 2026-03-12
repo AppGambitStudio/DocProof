@@ -488,6 +488,18 @@ export function ApiReference() {
             <code className="bg-gray-100 px-2 py-0.5 rounded font-mono text-gray-800">
               {apiUrl}
             </code>
+            <span className="text-gray-300 mx-1">|</span>
+            <a
+              href={`${apiUrl}/openapi.json`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
+            >
+              OpenAPI Spec
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
           </div>
         )}
 
