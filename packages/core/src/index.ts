@@ -46,3 +46,6 @@ export { withRetry, isRetryableBedrockError } from "./extraction/retry";
 
 // Jobs
 export { canTransition, assertTransition, isTerminal } from "./jobs/status";
+
+// Settings
+export { type AppSettings, DEFAULT_SETTINGS, SETTINGS_FIELDS } from "./settings";

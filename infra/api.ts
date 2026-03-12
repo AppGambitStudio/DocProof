@@ -165,3 +165,62 @@ api.route("POST /admin/jobs/{id}/review", {
 }, {
   auth: { jwt: { authorizer: cognitoAuthorizer.id } },
 });
+
+// --- Settings API Routes (Cognito JWT auth) ---
+
+api.route("GET /admin/settings", {
+  handler: "packages/functions/src/api/admin/settings.handler",
+  link: [storage.table],
+}, {
+  auth: { jwt: { authorizer: cognitoAuthorizer.id } },
+});
+
+api.route("PUT /admin/settings", {
+  handler: "packages/functions/src/api/admin/settings.handler",
+  link: [storage.table],
+}, {
+  auth: { jwt: { authorizer: cognitoAuthorizer.id } },
+});
+
+// --- API Key Management Routes (Cognito JWT auth) ---
+
+api.route("GET /admin/api-keys", {
+  handler: "packages/functions/src/api/admin/api-keys.handler",
+  link: [storage.table],
+}, {
+  auth: { jwt: { authorizer: cognitoAuthorizer.id } },
+});
+
+api.route("POST /admin/api-keys", {
+  handler: "packages/functions/src/api/admin/api-keys.handler",
+  link: [storage.table],
+}, {
+  auth: { jwt: { authorizer: cognitoAuthorizer.id } },
+});
+
+api.route("GET /admin/api-keys/{id}", {
+  handler: "packages/functions/src/api/admin/api-keys.handler",
+  link: [storage.table],
+}, {
+  auth: { jwt: { authorizer: cognitoAuthorizer.id } },
+});
+
+api.route("PUT /admin/api-keys/{id}", {
+  handler: "packages/functions/src/api/admin/api-keys.handler",
+  link: [storage.table],
+}, {
+  auth: { jwt: { authorizer: cognitoAuthorizer.id } },
+});
+
+api.route("DELETE /admin/api-keys/{id}", {
+  handler: "packages/functions/src/api/admin/api-keys.handler",
+  link: [storage.table],
+}, {
+  auth: { jwt: { authorizer: cognitoAuthorizer.id } },
+});
+
+// --- OpenAPI Spec (public, no auth) ---
+
+api.route("GET /openapi.json", {
+  handler: "packages/functions/src/api/openapi.handler",
+});

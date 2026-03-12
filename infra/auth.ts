@@ -1,10 +1,12 @@
+import { storage } from "./storage";
+
 // --- API Key for Job API (machine-to-machine) ---
 
 export const apiKeySecret = new sst.Secret("DocProofApiKey", "ffa54db8-3b0f-4e12-b4fb-365591e8f8cd");
 
 const apiKeyAuthorizer = new sst.aws.Function("ApiKeyAuthorizer", {
   handler: "packages/functions/src/api/auth/api-key-authorizer.handler",
-  link: [apiKeySecret],
+  link: [apiKeySecret, storage.table],
   timeout: "10 seconds",
 });
 

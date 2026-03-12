@@ -10,6 +10,8 @@ import { JobList } from "./pages/jobs/JobList";
 import { CreateJob } from "./pages/jobs/CreateJob";
 import { JobDetail } from "./pages/jobs/JobDetail";
 import { ApiReference } from "./pages/ApiReference";
+import Settings from "./pages/Settings";
+import ApiKeys from "./pages/ApiKeys";
 import { AuthProvider, useAuth } from "./lib/contexts/AuthContext";
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
@@ -52,6 +54,8 @@ export function App() {
             <Route path="/jobs/new" element={<CreateJob />} />
             <Route path="/jobs/:id" element={<JobDetail />} />
             <Route path="/api" element={<ApiReference />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/api-keys" element={<ApiKeys />} />
           </Route>
         </Routes>
       </BrowserRouter>
