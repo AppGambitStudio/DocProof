@@ -32,12 +32,35 @@ interface DocumentTypeConfig {
   acceptedFormats: string[];    // e.g. ["pdf", "jpg", "png"]
   extractionPrompt: string;     // Claude prompt for extracting fields
   expectedFields: FieldDefinition[];
+  satisfiesTypes?: string[];    // other typeIds this document can substitute for
   fieldExtractionRules?: FieldExtractionRule[];  // per-field extraction instructions
   flagConditions?: FlagCondition[];              // conditions that flag a document for review
   applicableTo?: string[];                       // restrict to specific metadata values
   category?: string;                             // grouping category (e.g. "identity", "address", "financial")
 }
+```
 
+#### `satisfiesTypes` — Document Substitution
+
+The `satisfiesTypes` field declares that a document type can serve as a substitute for other required types. This is useful when one document inherently contains the same information as another.
+
+**Example:** An Aadhaar card contains a verified address, so it can also count as address proof:
+
+```json
+{
+  "typeId": "aadhaar_card",
+  "label": "Aadhaar Card",
+  "required": true,
+  "satisfiesTypes": ["address_proof"],
+  ...
+}
+```
+
+With this configuration, if a job includes an Aadhaar card but no separate address proof document, the engine will use the Aadhaar card's extracted data for any cross-document rules that reference `address_proof`.
+
+**Important:** Set `satisfiesTypes` on the document that *provides* the substitute, not on the document being substituted. Think of it as "this document also counts as...".
+
+```typescript
 interface FieldDefinition {
   name: string;                 // field key, e.g. "pan_number"
   label: string;                // display label
@@ -201,7 +224,7 @@ Use this sparingly -- it adds a Claude API call per validation.
 
 ### `exact`
 
-Values must be identical (after trimming whitespace).
+Values must be identical (after trimming whitespace). Date-like values are automatically normalized — different separators are treated as equivalent, so `31/08/2002` matches `31-08-2002` and `31.08.2002`.
 
 ```json
 {

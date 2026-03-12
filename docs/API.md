@@ -12,6 +12,9 @@ DocProof uses two auth mechanisms:
 |---|---|---|
 | `/jobs/*` | API Key (Lambda authorizer) | `X-Api-Key: <your-api-key>` |
 | `/admin/*` | Cognito JWT | `Authorization: Bearer <cognito-token>` |
+| `/openapi.json` | None (public) | — |
+
+API keys can be managed via the admin console (Settings → API Keys) or programmatically through the [API Key endpoints](#api-key-management).
 
 ---
 
@@ -601,6 +604,171 @@ Get aggregate statistics.
 
 ---
 
+---
+
+### GET /admin/settings
+
+Get application settings.
+
+**Response (200):**
+
+```json
+{
+  "defaultModel": "haiku",
+  "escalationModel": "sonnet",
+  "escalationThreshold": "LOW",
+  "defaultTemperature": 0,
+  "maxFileSizeMb": 10,
+  "maxFilesPerJob": 20,
+  "documentRetentionDays": 90,
+  "resultRetentionDays": 365,
+  "webhookTimeoutMs": 10000,
+  "webhookRetries": 3,
+  "autoApproveThreshold": null,
+  "requireReviewForAnomalies": true,
+  "notifyOnComplete": false,
+  "notifyOnFailure": false
+}
+```
+
+Settings are merged with defaults — any field not explicitly set returns the default value.
+
+---
+
+### PUT /admin/settings
+
+Update application settings (partial merge).
+
+**Request body:** Include only the fields you want to change.
+
+```json
+{
+  "maxFileSizeMb": 25,
+  "requireReviewForAnomalies": false
+}
+```
+
+Only whitelisted fields are accepted. Unknown fields are silently ignored.
+
+**Response (200):**
+
+```json
+{
+  "status": "updated",
+  "settings": { ... }
+}
+```
+
+---
+
+## API Key Management
+
+### GET /admin/api-keys
+
+List all API keys (metadata only — key values are never returned).
+
+**Response (200):**
+
+```json
+{
+  "keys": [
+    {
+      "keyId": "key_abc123",
+      "name": "Production CRM",
+      "prefix": "dp_sk_a1b2...",
+      "status": "active",
+      "createdAt": "2026-03-10T10:00:00.000Z",
+      "lastUsedAt": "2026-03-12T08:30:00.000Z",
+      "expiresAt": null
+    }
+  ]
+}
+```
+
+---
+
+### POST /admin/api-keys
+
+Create a new API key. The full key value is returned **once** in the response and cannot be retrieved again.
+
+**Request body:**
+
+```json
+{
+  "name": "Production CRM",
+  "expiresAt": "2027-01-01T00:00:00.000Z"
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | Human-readable label |
+| `expiresAt` | string (ISO 8601) | No | Expiry date; `null` for no expiry |
+
+**Response (201):**
+
+```json
+{
+  "keyId": "key_abc123",
+  "apiKey": "dp_sk_a1b2c3d4...full-key-here...",
+  "name": "Production CRM",
+  "status": "active",
+  "createdAt": "2026-03-10T10:00:00.000Z",
+  "expiresAt": null
+}
+```
+
+The `apiKey` field is the full key to use in `X-Api-Key` headers. Store it securely.
+
+---
+
+### PUT /admin/api-keys/:id
+
+Update an API key's name or expiry.
+
+**Request body:**
+
+```json
+{
+  "name": "Updated Name",
+  "expiresAt": "2027-06-01T00:00:00.000Z"
+}
+```
+
+**Response (200):**
+
+```json
+{
+  "status": "updated"
+}
+```
+
+---
+
+### DELETE /admin/api-keys/:id
+
+Revoke an API key. The key is marked as `revoked` and can no longer be used for authentication.
+
+**Response (200):**
+
+```json
+{
+  "status": "revoked"
+}
+```
+
+---
+
+## OpenAPI Spec
+
+### GET /openapi.json
+
+Returns the OpenAPI 3.0.3 specification for all job endpoints. No authentication required.
+
+This can be used with tools like Swagger UI, Postman, or code generators to explore and test the API.
+
+---
+
 ## Job Statuses
 
 | Status | Description |
@@ -613,3 +781,5 @@ Get aggregate statistics.
 | `completed` | All checks finished successfully |
 | `failed` | Processing encountered an error |
 | `review_required` | Completed with anomalies requiring human review |
+| `approved` | Reviewed and approved by an admin |
+| `rejected` | Reviewed and rejected by an admin |

@@ -55,7 +55,8 @@ See the [`examples/`](examples/) directory for complete, ready-to-use rulesets:
 | Storage | S3 + DynamoDB (single-table) |
 | Events | EventBridge |
 | AI | Claude via AWS Bedrock (Haiku 4.5 + Sonnet) |
-| Frontend | React + Vite |
+| Auth | Cognito JWT (admin) + Managed API Keys (jobs) |
+| Frontend | React + Vite + Tailwind CSS |
 
 See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full system design.
 
@@ -64,7 +65,7 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full system design.
 DocProof is built entirely on AWS serverless services. This is a deliberate architectural choice:
 
 - **Cost** — Zero idle cost. You pay only when jobs are processing. A typical KYC job (3 documents) costs under $0.01 in infrastructure — the Bedrock API calls are the primary expense. No servers running 24/7 waiting for work.
-- **Security** — No long-lived servers to patch or harden. Each Lambda execution is an isolated micro-VM. S3 and DynamoDB encrypt at rest by default. Cognito handles auth — no password storage in your application. API keys are stored in SSM SecureString.
+- **Security** — No long-lived servers to patch or harden. Each Lambda execution is an isolated micro-VM. S3 and DynamoDB encrypt at rest by default. Cognito handles auth — no password storage in your application. API keys are SHA-256 hashed and stored in DynamoDB — the plaintext key is shown once at creation and never stored.
 - **Scalability** — Handles 1 job or 1,000 concurrent jobs with no configuration changes. Lambda scales automatically per-request. DynamoDB on-demand scales with traffic. No capacity planning needed.
 - **Operational simplicity** — No Docker, no Kubernetes, no EC2 instances, no load balancers. Deploy with `npx sst deploy`. Monitor with CloudWatch. The entire infrastructure is defined in ~200 lines of TypeScript.
 
@@ -99,9 +100,6 @@ cd docproof
 # Install
 pnpm install
 
-# Set your API key (used to authenticate job API requests)
-npx sst secret set DocProofApiKey your-api-key-here
-
 # Start local dev
 npx sst dev
 ```
@@ -126,6 +124,15 @@ aws cognito-idp admin-initiate-auth \
 ```
 
 Use the `IdToken` from the response as `Authorization: Bearer <token>` on admin endpoints.
+
+### Create API Keys
+
+API keys are managed through the Settings UI or the Admin API — no environment variables or SST secrets needed.
+
+1. Navigate to **Settings → API Keys** in the admin console, or
+2. Use the API: `POST /admin/api-keys` (see [API Reference](docs/API.md#post-adminapi-keys))
+
+The key is displayed once on creation. Store it securely — it cannot be retrieved later.
 
 ### Seed Example Rulesets
 
@@ -173,13 +180,13 @@ curl <your-api-url>/jobs/{jobId} \
 ```
 docproof/
 ├── sst.config.ts          # SST v3 configuration
-├── infra/                 # Infrastructure (S3, DynamoDB, API, Lambda pipeline)
+├── infra/                 # Infrastructure (S3, DynamoDB, API, Auth, Lambda pipeline)
 ├── packages/
-│   ├── core/              # Business logic (rule engine, extraction, types)
+│   ├── core/              # Business logic (rule engine, extraction, settings, types)
 │   ├── functions/         # Lambda handlers (API + pipeline steps)
-│   └── web/               # Admin Console + Review UI
-├── examples/              # Example rulesets (KYC India)
-└── docs/                  # Architecture, API reference, deployment guide
+│   └── web/               # Admin Console (Dashboard, RuleSets, Jobs, Settings, API Keys)
+├── examples/              # Example rulesets (KYC India, Vendor Onboarding, ABC Diagnostics)
+└── docs/                  # Architecture, API reference, rules guide, roadmap
 ```
 
 ## Lambda Timeout Note
@@ -192,16 +199,19 @@ For heavier workloads (large document sets, complex rulesets with many semantic 
 
 ## Key Features
 
-- **Visual Rule Builder (planned)** — drag-and-drop interface — under development
 - **Claude-Powered Extraction** — LLM-native document understanding, not template-based OCR
 - **Cross-Document Validation** — verify consistency across related documents (name matching, date alignment, address correlation)
 
 ![Field Rules](docs/screenshots/2.png)
 ![Cross-Doc Rules](docs/screenshots/3.png)
 
+- **Document Type Substitution (`satisfiesTypes`)** — declare that one document type can count as another (e.g., Aadhaar can serve as address proof), reducing submission requirements without changing rules
+- **Smart Date Normalization** — cross-document exact match handles different date separators (`31/08/2002` matches `31-08-2002`) automatically
 - **Anomaly Detection** — missing docs, duplicates, quality issues, suspicious patterns
-- **API-First** — integrate with any CRM, ERP, or internal system
-- **Cost Optimized** — configurable model selection per document type
+- **API-First** — integrate with any CRM, ERP, or internal system; [OpenAPI 3.0 spec](docs/API.md#openapi-spec) included
+- **Managed API Keys** — create, rotate, and revoke API keys from the admin console — no environment variables or secrets to manage
+- **Settings UI** — configure models, limits, retention, and behavior from the admin console without redeploying
+- **Cost Optimized** — configurable model selection per document type, per-job cost tracking in USD
 - **Audit Trail** — every check documented with reasoning and confidence scores
 
 ## Contributing
